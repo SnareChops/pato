@@ -1,0 +1,7 @@
+package pato:plugin-ui;
+
+world plugin {
+  export test: interface {
+    get-number: func() -> u32;
+  }
+}

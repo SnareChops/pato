@@ -1,2 +1,4 @@
-src-tauri/target/
+plugin-ui/target/
 src-tauri/gen/
+src-tauri/target/
+src-tauri/plugins/

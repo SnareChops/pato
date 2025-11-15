@@ -9,8 +9,22 @@
     "frontendDist": "../src-ui"
   },
   "app": {
+    "withGlobalTauri": true,
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Main window permissions",
+          "windows": [
+            "main"
+          ],
+          "permissions": [
+            "core:event:allow-listen",
+            "core:event:allow-emit"
+          ]
+        }
+      ]
     },
     "windows": [
       {
