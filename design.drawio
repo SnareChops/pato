@@ -1,0 +1,110 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/28.2.5 Chrome/138.0.7204.251 Electron/37.6.1 Safari/537.36" version="28.2.5">
+  <diagram name="Page-1" id="IpHY_QfAIv9LRwCE3_8C">
+    <mxGraphModel dx="2416" dy="1458" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-29" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-21" target="DVtKtvQ5-JCsqvwE5QIe-9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-32" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-21" target="DVtKtvQ5-JCsqvwE5QIe-22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-21" value="in-house plugins (trusted: may communicate with Host)&lt;div&gt;&lt;br&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="80" y="400" width="680" height="520" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-9" target="DVtKtvQ5-JCsqvwE5QIe-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-9" value="Host" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="680" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-1" target="DVtKtvQ5-JCsqvwE5QIe-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-6" value="emit" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="DVtKtvQ5-JCsqvwE5QIe-5">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-1" value="Tauri" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#008a00;fontColor=#ffffff;strokeColor=#005700;" vertex="1" parent="1">
+          <mxGeometry x="120" y="200" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.75;exitY=1;exitDx=0;exitDy=0;entryX=0.75;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-2" target="DVtKtvQ5-JCsqvwE5QIe-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-8" value="listen" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0" parent="DVtKtvQ5-JCsqvwE5QIe-7">
+          <mxGeometry x="-0.14" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-2" value="Web UI" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#1ba1e2;strokeColor=#006EAF;fontColor=#ffffff;" vertex="1" parent="1">
+          <mxGeometry x="120" y="120" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-1" target="DVtKtvQ5-JCsqvwE5QIe-1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-4" value="Wasmtime" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fillColor=#d80073;fontColor=#ffffff;strokeColor=#A50040;" vertex="1" parent="1">
+          <mxGeometry x="120" y="280" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-10" value="pato-twitch&lt;div&gt;(wasm)&lt;br&gt;&lt;br&gt;&lt;div&gt;oauth&lt;div&gt;helix api&lt;/div&gt;&lt;div&gt;irc&lt;/div&gt;&lt;/div&gt;&lt;div&gt;events&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="1">
+          <mxGeometry x="260" y="440" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-12" value="pato-ui&lt;div&gt;(wasm)&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;manipulation&lt;/div&gt;&lt;div&gt;events&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="1">
+          <mxGeometry x="140" y="440" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-13" value="pato-discord&lt;div&gt;(wasm)&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;oauth&lt;/div&gt;&lt;div&gt;discord api&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="1">
+          <mxGeometry x="380" y="440" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-14" value="pato-fs&lt;div&gt;(wasm)&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;sandboxed file system access&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="1">
+          <mxGeometry x="500" y="440" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-15" value="pato-twitch allows the user to authenticate and exposes the twitch API, chat, and events. It does not include UI for displaying any of this. Instead separate plugins should use the exposed API to communicate with twitch." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="250" y="570" width="100" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-16" value="pato-ui exposes standardized functions for controlling the UI to other plugins. All other plugins should use this plugin to perform UI operations or listen for user interactions with the UI." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="130" y="570" width="100" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-17" value="pato-discord allows the user to authenticate and exposes the discord API. It does not include UI for displaying any of this. Instead separate plugins should use the exposed API to communicate with discord." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="370" y="570" width="100" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-18" value="pato-db&lt;div&gt;(wasm)&lt;br&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;key-value store&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#6a00ff;fontColor=#ffffff;strokeColor=#3700CC;" vertex="1" parent="1">
+          <mxGeometry x="620" y="440" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-19" value="pato-fs allows plugins to load and store files. wasm code is sandboxed and cannot directly access the user&#39;s file system, this must be exposed through the host. This plugin exposes file access safely without allowing access to the host directly from untrusted plugins" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="490" y="570" width="100" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-20" value="pato-db allows plugins to save and query data they need. This could be a simple key-value store. Investigation is needed to determine if we can restrict plugins to accessing their own data only." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="610" y="570" width="100" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-31" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.25;exitY=0;exitDx=0;exitDy=0;entryX=0.25;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="DVtKtvQ5-JCsqvwE5QIe-22" target="DVtKtvQ5-JCsqvwE5QIe-21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-22" value="external plugins [community created] (untrusted: No Host Access)" style="rounded=0;whiteSpace=wrap;html=1;align=center;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="80" y="960" width="680" height="320" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-23" value="twitch-chat" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" vertex="1" parent="1">
+          <mxGeometry x="120" y="1000" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-24" value="twitch-alerts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" vertex="1" parent="1">
+          <mxGeometry x="240" y="1000" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-25" value="..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" vertex="1" parent="1">
+          <mxGeometry x="360" y="1000" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-26" value="..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" vertex="1" parent="1">
+          <mxGeometry x="490" y="1000" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-27" value="..." style="rounded=0;whiteSpace=wrap;html=1;fillColor=#a20025;fontColor=#ffffff;strokeColor=#6F0000;" vertex="1" parent="1">
+          <mxGeometry x="620" y="1000" width="80" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-28" value="Plugin authors decide how big/small their feature sets are. They can use pato-ui to register UI components, pato-fs to access files, pato-db to persist data between restarts, and any other utilities as needed. They can also depend on other community plugins." style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;fontColor=#ffffff;darkOpacity=0.05;fillColor=#0050ef;strokeColor=#001DBC;fillStyle=solid;direction=west;gradientDirection=north;shadow=1;size=20;pointerEvents=1;verticalAlign=top;" vertex="1" parent="1">
+          <mxGeometry x="270" y="1160" width="300" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="DVtKtvQ5-JCsqvwE5QIe-33" value="Basic System Design Diagram" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontStyle=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="80" y="8" width="260" height="30" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

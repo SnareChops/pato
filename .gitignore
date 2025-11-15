@@ -2,3 +2,4 @@ plugin-ui/target/
 src-tauri/gen/
 src-tauri/target/
 src-tauri/plugins/
+*.drawio.bkp
