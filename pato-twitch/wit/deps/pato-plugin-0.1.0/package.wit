@@ -1,0 +1,137 @@
+package pato:plugin@0.1.0;
+
+interface init {
+  init: func(pid: string) -> result<bool, string>;
+}
+
+interface log {
+  info: func(message: string);
+
+  warn: func(message: string);
+
+  error: func(message: string);
+}
+
+interface storage {
+  get: func(pid: string, key: string) -> option<string>;
+
+  set: func(pid: string, key: string, value: string) -> bool;
+
+  del: func(pid: string, key: string) -> bool;
+}
+
+interface database {
+  record index {
+    name: string,
+    key: string,
+    unique: bool,
+  }
+
+  record store {
+    name: string,
+    key: string,
+    auto: bool,
+    indexes: list<index>,
+  }
+
+  record bound {
+    key: string,
+    open: bool,
+  }
+
+  variant key-range {
+    lower-bound(bound),
+    upper-bound(bound),
+    between(tuple<bound, bound>),
+  }
+
+  variant query {
+    key(string),
+    keys(list<string>),
+    range(key-range),
+  }
+
+  /// Schema registration
+  register: func(pid: string, schema: list<store>) -> bool;
+
+  /// Operations
+  get: func(pid: string, store: string, index: option<string>, query: query) -> list<list<tuple<string, string>>>;
+
+  set: func(pid: string, store: string, data: list<tuple<string, string>>) -> bool;
+
+  get-all: func(pid: string, store: string) -> list<list<tuple<string, string>>>;
+
+  del: func(pid: string, store: string, query: query) -> bool;
+
+  count: func(pid: string, store: string, index: option<string>, query: option<query>) -> u32;
+}
+
+interface widgets {
+  record action {
+    id: string,
+    text: string,
+    description: option<string>,
+  }
+
+  record status-widget {
+    id: string,
+    icon: string,
+    label: string,
+    tooltip: option<string>,
+    actions: list<action>,
+  }
+
+  variant widget {
+    status-widget(status-widget),
+  }
+
+  update: func(pid: string, widget: widget) -> bool;
+}
+
+interface widget-events {
+  variant event {
+    clicked,
+    action(string),
+  }
+
+  on-event: func(event: event, id: string);
+}
+
+interface auth {
+  open-auth-window: func(pid: string, title: string, url: string) -> bool;
+}
+
+interface auth-events {
+  /// Triggered when the OAuth flow is completed / cancelled or otherwise closed
+  /// If success is false, the auth flow failed or was cancelled in some way
+  on-auth: func(success: bool, response: option<string>) -> result<_, string>;
+}
+
+world plugin {
+  export init;
+}
+world logger {
+  import log;
+}
+world ui {
+  import widgets;
+
+  export widget-events;
+}
+world db {
+  import database;
+}
+world store {
+  import storage;
+}
+world host {
+  import widgets;
+
+  export init;
+  export widget-events;
+}
+world oauth {
+  import auth;
+
+  export auth-events;
+}

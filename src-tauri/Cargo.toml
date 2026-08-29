@@ -16,9 +16,14 @@ tauri-build = { version = "2.5", features = [] }
 tauri = { version = "2.5", features = [] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-wasmtime = { version = "25.0", features = ["component-model"] }
-wasmtime-wasi = "25.0"
+wasmtime = { version = "40", features = ["component-model", "async"] }
+wasmtime-wasi = "40"
+wasmtime-wasi-http = "40"
 tokio = { version = "1.0", features = ["full"] }
+uuid = { version = "1.18.1", features = ["v4"] }
+walkdir = "2.5.0"
+dashmap = "6.1.0"
+async-trait = "0.1.89"
 
 [features]
 # This feature is used for production builds or when `devPath` points to the filesystem
