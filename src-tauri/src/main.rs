@@ -7,8 +7,6 @@ mod wasm;
 
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 
-// Helper function to extract access token from URL fragment
-
 #[tauri::command]
 async fn pato_ready() -> Result<bool, String> {
     println!("Pato UI signaled ready");

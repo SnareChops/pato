@@ -1,4 +1,4 @@
-use crate::{js::call_js, wasm};
+use crate::{js::call_js_or_default, wasm};
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use serde_json::json;
@@ -6,7 +6,7 @@ use wasmtime::component::HasSelf;
 
 wasmtime::component::bindgen!({
     world: "db",
-    imports: { default: async | trappable },
+    imports: { default: async },
     exports: { default: async },
 });
 
@@ -97,115 +97,84 @@ impl Serialize for database::Query {
 }
 
 impl database::Host for crate::wasm::HostData {
-    async fn register(
-        &mut self,
-        pid: String,
-        schema: Vec<database::Store>,
-    ) -> Result<bool, wasmtime::Error> {
-        self.schemas.insert(pid, schema);
-        Ok(true)
+    async fn register(&mut self, schema: Vec<database::Store>) -> bool {
+        self.schema = schema;
+        true
     }
 
     async fn get(
         &mut self,
-        pid: String,
         store: String,
         index: Option<String>,
         query: database::Query,
-    ) -> Result<Vec<Vec<(String, String)>>, wasmtime::Error> {
-        call_js::<_, Vec<Vec<(String, String)>>>(
+    ) -> Vec<Vec<(String, String)>> {
+        call_js_or_default(
             "dbGet",
             Some(json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "store": store,
               "index": index,
               "query": query,
             })),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
-    async fn set(
-        &mut self,
-        pid: String,
-        store: String,
-        data: Vec<(String, String)>,
-    ) -> Result<bool, wasmtime::Error> {
-        call_js::<_, bool>(
+    async fn set(&mut self, store: String, data: Vec<(String, String)>) -> bool {
+        call_js_or_default(
             "dbSet",
             Some(json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "store": store,
               "data": data,
             })),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
-    async fn get_all(
-        &mut self,
-        pid: String,
-        store: String,
-    ) -> Result<Vec<Vec<(String, String)>>, wasmtime::Error> {
-        call_js::<_, Vec<Vec<(String, String)>>>(
+    async fn get_all(&mut self, store: String) -> Vec<Vec<(String, String)>> {
+        call_js_or_default(
             "dbGetAll",
             Some(json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "store": store,
             })),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
-    async fn del(
-        &mut self,
-        pid: String,
-        store: String,
-        query: database::Query,
-    ) -> Result<bool, wasmtime::Error> {
-        call_js::<_, bool>(
+    async fn del(&mut self, store: String, query: database::Query) -> bool {
+        call_js_or_default(
             "dbDel",
             Some(json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "store": store,
               "query": query,
             })),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
     async fn count(
         &mut self,
-        pid: String,
         store: String,
         index: Option<String>,
         query: Option<database::Query>,
-    ) -> Result<u32, wasmtime::Error> {
-        call_js::<_, u32>(
+    ) -> u32 {
+        call_js_or_default(
             "dbCount",
             Some(json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "store": store,
               "index": index,
               "query": query,
             })),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 }
 
-pub async fn init() -> Result<(), String> {
+pub fn init() -> Result<(), String> {
     println!("Initializing DB module...");
-    wasm::actor()
-        .await
-        .map_err(|e| e.to_string())?
-        .link(|linker| pato::plugin::database::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    wasm::link(|linker| pato::plugin::database::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
 }

@@ -1,8 +1,9 @@
 #!/bin/bash
+set -e   # a failed jco/tsc/cargo step must stop the run, not fall through
 
 # Build pato-twitch plugin
 cd pato-twitch
-wkg wit fetch
+wkg fetch
 cargo build --release --target wasm32-wasip2 
 
 # Copy plugins
@@ -11,7 +12,22 @@ mkdir -p src-tauri/plugins/pato_twitch_0_1_0
 cp pato-twitch/target/wasm32-wasip2/release/pato_twitch.wasm src-tauri/plugins/pato_twitch_0_1_0/pato_twitch.wasm
 
 # Build UI
+#
+# jco is `@bytecodealliance/jco` (install: npm i -g @bytecodealliance/jco).
+# Do NOT `npx jco` — the bare name `jco` on npm is a dependency-confusion
+# placeholder, not the real tool.
+rm -rf src-ui/generated   # jco errors intermittently when overwriting an existing out-dir
+jco guest-types src-tauri/wit-internal -n webview -o src-ui/generated
+tsc --noEmit -p src-ui
 esbuild src-ui/pato.ts --bundle --sourcemap --outfile=src-ui/index.js
 
 # Run application
+#
+# WebKitGTK's Wayland backend is unreliable on NVIDIA: the DMABUF renderer
+# crashes ("Error 71 dispatching to Wayland display"), text-field focus can
+# deadlock the web process, and KWin gives the window no titlebar buttons.
+# Running under XWayland avoids all three; keep the DMABUF flag as a belt-and-
+# braces measure for the NVIDIA driver.
+export GDK_BACKEND=x11
+export WEBKIT_DISABLE_DMABUF_RENDERER=1
 cargo tauri dev --no-watch

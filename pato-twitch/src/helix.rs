@@ -8,10 +8,13 @@ struct TwitchUsersResponse {
     data: Vec<TwitchUser>,
 }
 #[derive(serde::Deserialize, Clone)]
+// Full Twitch "Get Users" response model; not every field is consumed yet
+#[allow(dead_code)]
 pub struct TwitchUser {
     pub id: String,
     pub login: String,
     pub display_name: String,
+    #[serde(rename = "type")]
     pub type_: String,
     pub broadcaster_type: String,
     pub description: String,
@@ -24,15 +27,22 @@ fn url(path: &str) -> String {
     format!("{}/{}", API_URL, path)
 }
 pub struct TwitchApi {
+    // Retained for the upcoming token-refresh flow
+    #[allow(dead_code)]
     token: String,
     default_headers: types::Headers,
 }
 impl TwitchApi {
     pub fn new(token: String) -> Self {
-        let default_headers = types::Headers::new();
-        let _ = default_headers.append("Authorization", format!("Bearer {}", &token).as_bytes());
-        let _ = default_headers.append("Client-Id", CLIENT_ID.as_bytes());
-        let _ = default_headers.append("Content-Type", b"application/json");
+        let default_headers = types::Headers::from_list(&[
+            (
+                "Authorization".to_string(),
+                format!("Bearer {}", token).into_bytes(),
+            ),
+            ("Client-Id".to_string(), CLIENT_ID.as_bytes().to_vec()),
+            ("Content-Type".to_string(), b"application/json".to_vec()),
+        ])
+        .expect("valid default headers");
         TwitchApi {
             token,
             default_headers,
@@ -40,17 +50,19 @@ impl TwitchApi {
     }
 
     pub fn get_my_user(&self) -> Result<TwitchUser, String> {
-        let response =
-            http::get::<Vec<TwitchUser>>(url("/users").as_str(), self.default_headers.clone())?;
-        if response.status != 200 {
-            return Err(format!("Failed to get user. Code:{}", response.status));
+        let response = http::get(&url("users"), self.default_headers.clone())?;
+        if !response.is_success() {
+            return Err(format!(
+                "Failed to get user (HTTP {}): {}",
+                response.status,
+                response.text()
+            ));
         }
-        match response.body {
-            Some(users) => match users.first() {
-                Some(user) => Ok(user.clone()),
-                None => Err("No users returned".to_string()),
-            },
-            None => Err("No user data returned".to_string()),
-        }
+        response
+            .json::<TwitchUsersResponse>()?
+            .data
+            .into_iter()
+            .next()
+            .ok_or_else(|| "No users returned".to_string())
     }
 }

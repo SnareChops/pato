@@ -57,6 +57,23 @@ where
     }
 }
 
+/// Like [`call_js`], but infallible: on any transport/deserialization error it
+/// logs and yields `Return::default()`. Host imports use this so a hiccup in the
+/// UI layer degrades gracefully instead of trapping (and poisoning) the plugin.
+pub async fn call_js_or_default<Args, Return>(name: &str, args: Args) -> Return
+where
+    Args: Serialize,
+    Return: for<'de> Deserialize<'de> + Default,
+{
+    match call_js::<Args, Return>(name, args).await {
+        Ok(value) => value,
+        Err(e) => {
+            eprintln!("host call to JS `{name}` failed: {e}");
+            Return::default()
+        }
+    }
+}
+
 #[tauri::command]
 pub fn js_response(id: String, result: Option<serde_json::Value>) -> Result<(), String> {
     println!("JS response for {id} {result:?}");

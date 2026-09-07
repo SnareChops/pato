@@ -1,5 +1,6 @@
 import { component, Component } from "../lib/component.js";
-import { StatusWidgetDef, StatusWidget } from "../widgets/status-widget.js";
+import { StatusWidget } from "../widgets/status-widget.js";
+import type { StatusWidget as StatusWidgetView } from "pato:internal/widget-view@0.1.0";
 
 export class PatoStatusWidgets extends Component {
   #widgets: StatusWidget[] = [];
@@ -9,7 +10,7 @@ export class PatoStatusWidgets extends Component {
     this.append(widget);
   }
 
-  updateStatusWidget(props: StatusWidgetDef) {
+  updateStatusWidget(props: StatusWidgetView) {
     if (!props.id) return false;
     console.log("Updating status widget", props);
     let widget: StatusWidget | null = this.querySelector<StatusWidget>(`status-widget[id="${props.id}"]`);

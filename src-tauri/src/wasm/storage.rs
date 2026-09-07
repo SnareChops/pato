@@ -1,9 +1,9 @@
-use crate::{js::call_js, wasm};
+use crate::{js::call_js_or_default, wasm};
 use serde_json::json;
 
 wasmtime::component::bindgen!({
     world: "store",
-    imports: { default: async | trappable },
+    imports: { default: async },
     exports: { default: async },
 });
 
@@ -11,56 +11,42 @@ pub use pato::plugin::storage;
 use wasmtime::component::HasSelf;
 
 impl storage::Host for wasm::HostData {
-    async fn get(&mut self, pid: String, key: String) -> Result<Option<String>, wasmtime::Error> {
-        call_js::<_, Option<String>>(
+    async fn get(&mut self, key: String) -> Option<String> {
+        call_js_or_default(
             "storeGet",
             json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "key": key,
             }),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
-    async fn set(
-        &mut self,
-        pid: String,
-        key: String,
-        value: String,
-    ) -> Result<bool, wasmtime::Error> {
-        call_js::<_, bool>(
+    async fn set(&mut self, key: String, value: String) -> bool {
+        call_js_or_default(
             "storeSet",
             json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "key": key,
               "value": value,
             }),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 
-    async fn del(&mut self, pid: String, key: String) -> Result<bool, wasmtime::Error> {
-        call_js::<_, bool>(
+    async fn del(&mut self, key: String) -> bool {
+        call_js_or_default(
             "storeDel",
             json!({
-              "plugin": self.name(pid),
+              "plugin": self.name,
               "key": key,
             }),
         )
         .await
-        .map_err(|e| wasmtime::Error::msg(e))
     }
 }
 
-pub async fn init() -> Result<(), String> {
+pub fn init() -> Result<(), String> {
     println!("Initializing Storage module...");
-    wasm::actor()
-        .await
-        .map_err(|e| e.to_string())?
-        .link(|linker| pato::plugin::storage::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
-        .await
-        .map_err(|e| e.to_string())?;
-    Ok(())
+    wasm::link(|linker| pato::plugin::storage::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
 }

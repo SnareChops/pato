@@ -1,7 +1,7 @@
 package pato:plugin@0.1.0;
 
 interface init {
-  init: func(pid: string) -> result<bool, string>;
+  init: func() -> result<bool, string>;
 }
 
 interface log {
@@ -11,9 +11,9 @@ interface log {
 }
 
 interface storage {
-  get: func(pid: string, key: string) -> option<string>;
-  set: func(pid: string, key: string, value: string) -> bool;
-  del: func(pid: string, key: string) -> bool;
+  get: func(key: string) -> option<string>;
+  set: func(key: string, value: string) -> bool;
+  del: func(key: string) -> bool;
 }
 
 interface database {
@@ -43,13 +43,13 @@ interface database {
     range(key-range),
   }
   // Schema registration
-  register: func(pid: string, schema: list<store>) -> bool;
+  register: func(schema: list<store>) -> bool;
   // Operations
-  get: func(pid: string, store: string, index: option<string>, query: query) -> list<list<tuple<string, string>>>;
-  set: func(pid: string, store: string, data: list<tuple<string, string>>) -> bool;
-  get-all: func(pid: string, store: string) -> list<list<tuple<string, string>>>;
-  del: func(pid: string, store: string, query: query) -> bool;
-  count: func(pid: string, store: string, index: option<string>, query: option<query>) -> u32;
+  get: func(store: string, index: option<string>, query: query) -> list<list<tuple<string, string>>>;
+  set: func(store: string, data: list<tuple<string, string>>) -> bool;
+  get-all: func(store: string) -> list<list<tuple<string, string>>>;
+  del: func(store: string, query: query) -> bool;
+  count: func(store: string, index: option<string>, query: option<query>) -> u32;
 }
 
 interface widgets {
@@ -68,7 +68,7 @@ interface widgets {
   variant widget {
     status-widget(status-widget),
   }
-  update: func(pid: string, widget: widget) -> bool;
+  update: func(widget: widget) -> bool;
 }
 
 interface widget-events {
@@ -80,7 +80,7 @@ interface widget-events {
 }
 
 interface auth {
-  open-auth-window: func(pid: string, title: string, url: string) -> bool;
+  open-auth-window: func(title: string, url: string) -> bool;
 }
 
 interface auth-events {

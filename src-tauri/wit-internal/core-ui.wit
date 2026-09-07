@@ -1,0 +1,31 @@
+package pato:internal@0.1.0;
+
+interface widget-view {
+  // Mirrors the shape the webview already renders (StatusWidgetAction),
+  // NOT the plugin-facing pato:plugin/widgets action ({text, description}).
+  // The core translates between the two.
+  record action { id: string, label: string, tooltip: option<string> }
+  record status-widget {
+    id: string,
+    icon: string,
+    label: string,
+    tooltip: option<string>,
+    actions: list<action>,
+  }
+  variant widget { status-widget(status-widget) }
+  update: func(widget: widget) -> bool;
+}
+
+interface ui-signals {
+  variant widget-signal { clicked, action(string) }
+  widget-event: func(target: string, signal: widget-signal);
+}
+
+world webview {
+  export widget-view;
+  import ui-signals;
+}
+world core-ui {
+  import widget-view;
+  export ui-signals;
+}
