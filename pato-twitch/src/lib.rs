@@ -29,6 +29,7 @@ where
 
 struct PatoTwitch {
     status: widgets::TwitchStatusWidget,
+    panel: widgets::TwitchPanel,
     helix: Option<helix::TwitchApi>,
     user: Option<helix::TwitchUser>,
 }
@@ -45,23 +46,30 @@ impl plugin::init::Guest for PatoTwitch {
 }
 
 impl plugin::widget_events::Guest for PatoTwitch {
-    // Handle widget events
-    fn on_event(event: plugin::widget_events::Event, id: String) {
-        with_plugin(|plugin| match event {
-            // If 'clicked' event
-            plugin::widget_events::Event::Clicked => {
-                if plugin.status.id == id {
-                    plugin.status.clicked();
-                }
+    // Pre-made status widget: click / action
+    fn on_status_event(widget_id: String, event: plugin::widget_events::StatusEvent) {
+        with_plugin(|plugin| {
+            if plugin.status.id != widget_id {
+                return;
             }
-            // If 'action' event
-            plugin::widget_events::Event::Action(action) => {
-                if plugin.status.id == id {
-                    plugin.status.action(action);
-                }
+            match event {
+                plugin::widget_events::StatusEvent::Clicked => plugin.status.clicked(),
+                plugin::widget_events::StatusEvent::Action(action) => plugin.status.action(action),
             }
         });
     }
+
+    // Custom widget: interactions come back keyed by the element's `key`.
+    fn on_event(event: plugin::widget_events::WidgetEvent) {
+        with_plugin(|plugin| {
+            if event.node_key == widgets::HANDLER_REFRESH {
+                plugin.refresh_panel();
+            }
+        });
+    }
+
+    // Widget was (re)sized on the grid. The panel is responsive; nothing to do.
+    fn on_layout(_layout: plugin::widget_events::WidgetLayout) {}
 }
 
 impl plugin::auth_events::Guest for PatoTwitch {
@@ -112,6 +120,7 @@ impl PatoTwitch {
         // Create plugin instance
         let mut plugin = Self {
             status: widgets::TwitchStatusWidget::new(),
+            panel: widgets::TwitchPanel::new(),
             helix,
             user,
         };
@@ -120,6 +129,7 @@ impl PatoTwitch {
             Some(user) => plugin.status.connected(user),
             None => plugin.status.disconnected(),
         }
+        plugin.panel.set_user(plugin.user.as_ref());
         Ok(plugin)
     }
 
@@ -133,6 +143,7 @@ impl PatoTwitch {
                 self.status.connected(&user);
                 self.user = Some(user);
                 self.helix = Some(api);
+                self.panel.set_user(self.user.as_ref());
                 Ok(())
             }
             Err(e) => {
@@ -141,9 +152,16 @@ impl PatoTwitch {
                 self.helix = None;
                 self.user = None;
                 self.status.disconnected();
+                self.panel.set_user(None);
                 Err(e)
             }
         }
+    }
+
+    // Re-fetch the current user from Helix and push it to the panel.
+    fn refresh_panel(&mut self) {
+        self.user = self.helix.as_ref().and_then(|api| api.get_my_user().ok());
+        self.panel.set_user(self.user.as_ref());
     }
 }
 

@@ -1,10 +1,155 @@
 package pato:internal@0.1.0;
 
+// Core -> webview contract. jco reads this to type the JS side
+// (`jco guest-types src-tauri/wit-internal -n webview -o src-ui/generated`);
+// the Rust side hand-writes serde structs that must serialize to the exact
+// component-model JSON shape jco expects (see src-tauri/src/wasm/ui.rs).
+//
+// This mirrors the plugin-facing pato:plugin/{widget-dom,widgets,widget-events}
+// after the core has validated the tree, resolved asset URLs, and namespaced
+// every id / key with the owning plugin's pid. See custom-widgets.md.
+
+// Element/style vocabulary the webview renders. Structurally identical to
+// pato:plugin/widget-dom — the core forwards the tree largely unchanged.
+interface widget-dom {
+  enum tag {
+    // layout / grouping
+    div, span, section, header, footer, nav, ul, ol, li,
+    // text
+    p, h1, h2, h3, h4, h5, h6, strong, em, small, code, pre, blockquote,
+    // interactive
+    button, input, select, %option, textarea, label, a, img,
+    // data
+    table, thead, tbody, tr, th, td, progress, meter, 
+  }
+
+  enum input-type {
+    text,
+    number,
+    checkbox,
+    radio,
+  }
+
+  // Already validated by the core: `href` / `src` are concrete `https:` or
+  // `pato-asset://<pid>/...` URLs, ranges are clamped, invalid attrs dropped.
+  variant attr {
+    href(string),
+    src(string),
+    alt(string),
+    title(string),
+    name(string),
+    placeholder(string),
+    value(string),
+    kind(input-type),
+    checked(bool),
+    disabled(bool),
+    rows(u32),
+    min(f64),
+    max(f64),
+    step(f64),
+  }
+
+  // --- constrained style vocabulary --------------------------------------
+  // The webview maps these onto theme CSS variables / utility styles. No raw
+  // CSS ever crosses this boundary.
+
+  enum layout {
+    flex-row, flex-col,
+  }
+  enum space {
+    none, xs, sm, md, lg, xl,
+  }
+  enum text-size {
+    xs, sm, md, lg, xl, xxl,
+  }
+  enum align {
+    start, center, end, stretch, 
+  }
+  enum justify {
+    start, center, end, between, around,
+  }
+  enum theme-color {
+    fg, fg-muted, bg, bg-raised, border, primary, success, warning, danger, info,
+  }
+  variant size {
+    auto, fill, percent(u32), fixed(space),
+  }
+  record style {
+    layout: option<layout>,
+    gap: option<space>,
+    padding: option<space>,
+    margin: option<space>,
+    radius: option<space>,
+    color: option<theme-color>,
+    background: option<theme-color>,
+    font-size: option<text-size>,
+    align: option<align>,
+    justify: option<justify>,
+    grow: option<bool>,
+    wrap: option<bool>,
+    width: option<size>,
+    height: option<size>,
+  }
+
+  // --- events -----------------------------------------------------------
+
+  enum event-kind {
+    click, input, change, submit, focus, blur, enter-key,
+  }
+  // `handler` is the plugin's opaque id for this subscription; the webview
+  // echoes it back (as part of the interaction) so the core can route.
+  record binding {
+    kind: event-kind,
+    handler: string,
+  }
+
+  // --- tree -----------------------------------------------------------
+  // Flat node table (WIT forbids recursive types). Every node names its
+  // `parent` by index; node 0 is the root and the only node with no parent.
+  // `parent` is always a lower index than the node itself. Siblings render in
+  // ascending table order.
+
+  record element {
+    // Reconciliation key, pid-scoped by the core. The webview keys its diff
+    // on this to preserve DOM identity across updates.
+    key: option<string>,
+    tag: tag,
+    attrs: list<attr>,
+    style: option<style>,
+    events: list<binding>,
+  }
+  variant node-kind {
+    element(element),
+    text(string),
+    value-slot(string),
+  }
+  record node {
+    // Index of this node's parent in `custom-widget.nodes`; `none` only for
+    // node 0 (the root).
+    parent: option<u32>,
+    kind: node-kind,
+  }
+
+  // Widget footprint / grid geometry, in tiles.
+  record tile-size {
+    w: u32,
+    h: u32,
+  }
+}
+
+// Rendering surface the webview exports. The core calls these to mount,
+// update, and tear down widgets.
 interface widget-view {
+  use widget-dom.{node, tile-size};
+
   // Mirrors the shape the webview already renders (StatusWidgetAction),
   // NOT the plugin-facing pato:plugin/widgets action ({text, description}).
   // The core translates between the two.
-  record action { id: string, label: string, tooltip: option<string> }
+  record action {
+    id: string,
+    label: string,
+    tooltip: option<string>,
+  }
   record status-widget {
     id: string,
     icon: string,
@@ -12,20 +157,80 @@ interface widget-view {
     tooltip: option<string>,
     actions: list<action>,
   }
-  variant widget { status-widget(status-widget) }
+
+  // Flat node table; node 0 is the root, each node names its parent by index.
+  // Ids / keys are already pid-scoped.
+  record custom-widget {
+    id: string,
+    nodes: list<node>,
+  }
+
+  // Grid registration, mirrors pato:plugin/widgets.register (id is pid-scoped,
+  // sizes already clamped to sane bounds). The webview reserves grid space and
+  // may show a skeleton before the first `update`.
+  record widget-spec {
+    id: string,
+    size: tile-size,
+    min: option<tile-size>,
+    max: option<tile-size>,
+  }
+  register: func(spec: widget-spec) -> bool;
+
+  variant widget {
+    status-widget(status-widget),
+    custom(custom-widget),
+  }
   update: func(widget: widget) -> bool;
+
+  // Update a single `value-slot` node's text without a re-render / diff.
+  set-value: func(widget-id: string, slot: string, value: string) -> bool;
+
+  // Unmount a widget and free its grid tile (plugin unloaded / widget dropped).
+  remove: func(widget-id: string) -> bool;
 }
 
+// Signals the webview raises back to the core (user interactions). The core
+// routes these to the owning plugin by pid and forwards them as
+// pato:plugin/widget-events.
 interface ui-signals {
-  variant widget-signal { clicked, action(string) }
+  use widget-dom.{event-kind, tile-size};
+
+  // status-widget (existing)
+  variant widget-signal {
+    clicked,
+    action(string),
+  }
   widget-event: func(target: string, signal: widget-signal);
+
+  // custom-widget interaction. `payload` holds only whitelisted values that
+  // the webview extracted — never a raw DOM event.
+  variant payload {
+    none,
+    text(string),
+    toggled(bool),
+    fields(list<tuple<string, string>>),
+  }
+  record interaction {
+    widget-id: string,
+    // element `key`, or "" if none was set
+    node-key: string,
+    kind: event-kind,
+    payload: payload,
+  }
+  widget-interaction: func(interaction: interaction);
+
+  // User resized a widget on the grid. The core clamps to the spec's
+  // min / max, persists the layout, and forwards to the plugin's on-layout.
+  widget-resized: func(widget-id: string, tiles: tile-size);
 }
 
 world webview {
+  import widget-dom;
   export widget-view;
   import ui-signals;
 }
 world core-ui {
+  import widget-dom;
   import widget-view;
   export ui-signals;
 }

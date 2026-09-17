@@ -50,6 +50,7 @@ fn broker() -> &'static Broker {
 struct Broker {
     names: DashMap<String, String>,                          // name -> pid
     channels: DashMap<String, mpsc::UnboundedSender<PluginRequest>>, // pid -> plugin thread
+    roots: DashMap<String, PathBuf>,                         // name -> plugin directory
 }
 
 /// Host state private to a single plugin's `Store`. Every plugin gets its own
@@ -118,6 +119,7 @@ pub async fn init() -> Result<(), String> {
         .set(Broker {
             names: DashMap::new(),
             channels: DashMap::new(),
+            roots: DashMap::new(),
         })
         .map_err(|_| "WASM broker already initialized".to_string())?;
 
@@ -179,6 +181,13 @@ pub fn plugin_pid(name: &str) -> Option<String> {
     broker().names.get(name).map(|e| e.value().clone())
 }
 
+/// The on-disk directory a plugin was loaded from. Assets referenced by the
+/// plugin's custom widgets (`pato-asset://<name>/...`) are resolved relative to
+/// this directory's `assets/` subfolder.
+pub fn plugin_root(name: &str) -> Option<PathBuf> {
+    broker().roots.get(name).map(|e| e.value().clone())
+}
+
 async fn plugin_call(
     pid: &str,
     interface: &str,
@@ -227,6 +236,10 @@ pub async fn load_plugin(path: PathBuf) -> Result<String, String> {
         .and_then(|s| s.to_str())
         .ok_or_else(|| "Invalid plugin filename".to_string())?
         .to_string();
+    let root = path
+        .parent()
+        .map(|p| p.to_path_buf())
+        .unwrap_or_else(|| PathBuf::from("."));
     let pid = uuid::Uuid::new_v4().to_string();
     let linker = frozen_linker();
 
@@ -244,6 +257,7 @@ pub async fn load_plugin(path: PathBuf) -> Result<String, String> {
         .map_err(|_| "Plugin thread exited before finishing setup".to_string())??;
 
     broker().channels.insert(pid.clone(), tx);
+    broker().roots.insert(name.clone(), root);
     broker().names.insert(name, pid.clone());
     Ok(pid)
 }

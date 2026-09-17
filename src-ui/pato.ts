@@ -1,5 +1,5 @@
 import * as db from "./lib/db.js";
-import { PatoHeader, PatoHeaderLeft, PatoHeaderCenter, PatoHeaderRight, PatoStatusWidgets } from "./components/index.js";
+import { PatoGrid, PatoHeader, PatoHeaderLeft, PatoHeaderCenter, PatoHeaderRight, PatoStatusWidgets } from "./components/index.js";
 import { callRust } from "./lib/bindings.js";
 import "./lib/db.js";
 import "./lib/storage.js";
@@ -10,6 +10,9 @@ export async function init() {
   // Initialize dependencies
   await db.init();
   await initHeader();
+  // The grid must exist before plugins load so widget register/update calls
+  // from the core have somewhere to mount.
+  document.body.append(new PatoGrid());
   await callRust("pato_ready");
 }
 

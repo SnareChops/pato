@@ -2,6 +2,7 @@
 
 use std::sync::OnceLock;
 
+mod assets;
 mod js;
 mod wasm;
 
@@ -16,6 +17,7 @@ async fn pato_ready() -> Result<bool, String> {
 
 fn main() {
     tauri::Builder::default()
+        .register_uri_scheme_protocol("pato-asset", assets::handle)
         .setup(|app| {
             println!("Starting Pato...");
             let _ = APP_HANDLE.set(app.handle().clone());
@@ -24,6 +26,9 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             pato_ready,
             wasm::ui::status_widget_clicked,
+            wasm::ui::status_widget_action,
+            wasm::ui::custom_widget_event,
+            wasm::ui::widget_resized,
             js::js_response,
         ])
         .run(tauri::generate_context!())

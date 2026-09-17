@@ -7,6 +7,7 @@ interface chat {
 world twitch {
   import wasi:http/outgoing-handler@0.2.4;
   import wasi:http/types@0.2.4;
+  import pato:plugin/widget-dom@0.1.0;
   import pato:plugin/widgets@0.1.0;
   import pato:plugin/auth@0.1.0;
   import pato:plugin/storage@0.1.0;

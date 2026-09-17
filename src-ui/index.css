@@ -1,3 +1,60 @@
+/*
+ * Pato design tokens. Custom-widget styles (pato:internal/widget-dom `style`)
+ * resolve to these `var(--pato-*)` names in the webview. CSS custom properties
+ * inherit through shadow-DOM boundaries, so defining them on :root is enough
+ * for the <pato-custom-widget> shadow trees to read them.
+ */
+:root {
+  color-scheme: light dark;
+
+  --pato-space-none: 0;
+  --pato-space-xs: 2px;
+  --pato-space-sm: 4px;
+  --pato-space-md: 8px;
+  --pato-space-lg: 16px;
+  --pato-space-xl: 24px;
+
+  --pato-radius-none: 0;
+  --pato-radius-xs: 2px;
+  --pato-radius-sm: 3px;
+  --pato-radius-md: 4px;
+  --pato-radius-lg: 8px;
+  --pato-radius-xl: 12px;
+
+  --pato-text-xs: 10px;
+  --pato-text-sm: 12px;
+  --pato-text-md: 14px;
+  --pato-text-lg: 16px;
+  --pato-text-xl: 20px;
+  --pato-text-xxl: 28px;
+
+  --pato-color-fg: #1a1a1a;
+  --pato-color-fg-muted: #5f6b7a;
+  --pato-color-bg: #ffffff;
+  --pato-color-bg-raised: #f0f2f5;
+  --pato-color-border: #d7dbe0;
+  --pato-color-primary: #1d4ed8;
+  --pato-color-success: #16a34a;
+  --pato-color-warning: #d97706;
+  --pato-color-danger: #dc2626;
+  --pato-color-info: #0891b2;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --pato-color-fg: #e8eaed;
+    --pato-color-fg-muted: #9aa4b2;
+    --pato-color-bg: #1c1f24;
+    --pato-color-bg-raised: #262b32;
+    --pato-color-border: #3a414b;
+    --pato-color-primary: #60a5fa;
+    --pato-color-success: #4ade80;
+    --pato-color-warning: #fbbf24;
+    --pato-color-danger: #f87171;
+    --pato-color-info: #22d3ee;
+  }
+}
+
 body {
   display: flex;
   flex-direction: column;
@@ -11,17 +68,41 @@ body {
 }
 
 pato-grid {
+  /* `--pato-grid-tile` is the real pixel width of one `1fr` column; PatoGrid
+   * keeps it in sync via a ResizeObserver. The fallback keeps rows sane if the
+   * script hasn't run yet. */
+  --pato-grid-gap: 5px;
+  --pato-grid-tile: 40px;
+  --pato-grid-cell: #f5f5f5;
+  --pato-grid-line: #e2e2e2;
+
   display: grid;
   flex: 1;
   grid-template-columns: repeat(30, 1fr);
-  gap: 5px;
+  grid-auto-rows: var(--pato-grid-tile);
+  gap: var(--pato-grid-gap);
   width: 100%;
   box-sizing: border-box;
-  background-color: #f5f5f5;
-  background-image: linear-gradient(to right, rgba(0,0,0,0.1) 1px, transparent 1px),
-                    linear-gradient(to bottom, rgba(0,0,0,0.1) 1px, transparent 1px);
-  background-size: 3.33% 3.33%;
   overflow: auto;
+
+  /* Cell colour underneath; gap colour painted as a band at the start of every
+   * (tile + gap) step, then shifted by one tile so the bands land in the
+   * gutters between columns/rows rather than before the first one. */
+  background-color: var(--pato-grid-cell);
+  background-image:
+    linear-gradient(to right, var(--pato-grid-line) var(--pato-grid-gap), transparent 0),
+    linear-gradient(to bottom, var(--pato-grid-line) var(--pato-grid-gap), transparent 0);
+  background-size:
+    calc(var(--pato-grid-tile) + var(--pato-grid-gap)) calc(var(--pato-grid-tile) + var(--pato-grid-gap));
+  background-position: var(--pato-grid-tile) var(--pato-grid-tile);
+  background-attachment: local;
+}
+
+@media (prefers-color-scheme: dark) {
+  pato-grid {
+    --pato-grid-cell: #1c1f24;
+    --pato-grid-line: #2c313a;
+  }
 }
 
 pato-grid > * {
@@ -33,6 +114,33 @@ pato-grid > * {
   max-width: 100%;
   max-height: 100%;
   overflow: hidden;
+}
+
+/* Custom-widget cell: span + aspect-ratio are set inline from the tile size. */
+pato-grid > .pato-cell {
+  position: relative;
+  aspect-ratio: auto;
+  overflow: visible;
+  min-width: 0;
+}
+.pato-cell > pato-custom-widget {
+  position: absolute;
+  inset: 0;
+}
+.pato-cell > .pato-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 2;
+  background: linear-gradient(135deg, transparent 45%, var(--pato-color-fg-muted) 45% 55%, transparent 55%);
+  opacity: 0.45;
+}
+.pato-cell > .pato-resize:hover {
+  opacity: 1;
 }
 
 button-widget {
