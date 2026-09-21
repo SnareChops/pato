@@ -27,12 +27,15 @@ fn url(path: &str) -> String {
     format!("{}/{}", API_URL, path)
 }
 pub struct TwitchApi {
-    // Retained for the upcoming token-refresh flow
-    #[allow(dead_code)]
     token: String,
     default_headers: types::Headers,
 }
 impl TwitchApi {
+    // The raw oauth token, e.g. for IRC's `PASS oauth:<token>` login.
+    pub fn token(&self) -> &str {
+        &self.token
+    }
+
     pub fn new(token: String) -> Self {
         let default_headers = types::Headers::from_list(&[
             (

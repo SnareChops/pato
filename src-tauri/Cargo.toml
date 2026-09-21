@@ -23,6 +23,8 @@ tokio = { version = "1.0", features = ["full"] }
 uuid = { version = "1.18.1", features = ["v4"] }
 walkdir = "2.5.0"
 dashmap = "6.1.0"
+tokio-tungstenite = { version = "0.30.0", features = ["rustls-tls-webpki-roots"] }
+futures-util = { version = "0.3.34", features = ["sink"] }
 
 [features]
 # This feature is used for production builds or when `devPath` points to the filesystem

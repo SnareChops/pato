@@ -1,39 +1,39 @@
 use std::ops::{Deref, DerefMut};
 
-use crate::helix::TwitchUser;
+use crate::discord_api::DiscordUser;
 use crate::pato::plugin::{auth, widgets};
 use crate::{CLIENT_ID, REDIRECT_URI, SCOPES};
 
 // Newtype over the generated `StatusWidget`. Holds no extra state — it exists
-// only to hang Twitch-specific behaviour off the widget. `Deref`/`DerefMut`
+// only to hang Discord-specific behaviour off the widget. `Deref`/`DerefMut`
 // make the inner fields (`label`, `icon`, `id`, ...) directly accessible.
-pub struct TwitchStatusWidget(widgets::StatusWidget);
+pub struct DiscordStatusWidget(widgets::StatusWidget);
 
-impl Deref for TwitchStatusWidget {
+impl Deref for DiscordStatusWidget {
     type Target = widgets::StatusWidget;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
-impl DerefMut for TwitchStatusWidget {
+impl DerefMut for DiscordStatusWidget {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 const ACTION_CONNECT: &str = "connect";
-// Handled by `PatoTwitch::logout` (`lib.rs`), not here, since it affects
+// Handled by `PatoDiscord::logout` (`lib.rs`), not here, since it affects
 // every widget that depends on the connection - not just this one.
 pub const ACTION_DISCONNECT: &str = "disconnect";
 
-impl TwitchStatusWidget {
+impl DiscordStatusWidget {
     pub fn new() -> Self {
         let widget = Self(widgets::StatusWidget {
-            id: "twitch_status".to_string(),
+            id: "discord_status".to_string(),
             icon: "".to_string(),
             label: "Connect".to_string(),
-            tooltip: Some("Twitch".to_string()),
-            actions: vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")],
+            tooltip: Some("Discord".to_string()),
+            actions: vec![action(ACTION_CONNECT, "Connect", "Connect to Discord")],
         });
         widget.update();
         widget
@@ -44,7 +44,7 @@ impl TwitchStatusWidget {
     }
 
     // Every interaction is a named action - there is no separate "clicked"
-    // event. `disconnect` is handled by the caller (`PatoTwitch::logout`)
+    // event. `disconnect` is handled by the caller (`PatoDiscord::logout`)
     // since it affects more than this widget.
     pub fn action(&mut self, action: &str) {
         if action == ACTION_CONNECT {
@@ -52,12 +52,12 @@ impl TwitchStatusWidget {
         }
     }
 
-    // Show the connected Twitch user, with a "Disconnect" action in the
+    // Show the connected Discord user, with a "Disconnect" action in the
     // widget's dropdown.
-    pub fn connected(&mut self, user: &TwitchUser) {
-        self.label = user.display_name.clone();
-        self.icon = user.profile_image_url.clone();
-        self.actions = vec![action(ACTION_DISCONNECT, "Disconnect", "Sign out of Twitch")];
+    pub fn connected(&mut self, user: &DiscordUser) {
+        self.label = user.display_name().to_string();
+        self.icon = user.avatar_url();
+        self.actions = vec![action(ACTION_DISCONNECT, "Disconnect", "Sign out of Discord")];
         self.update();
     }
 
@@ -65,14 +65,14 @@ impl TwitchStatusWidget {
     pub fn disconnected(&mut self) {
         self.label = "Connect".to_string();
         self.icon = "".to_string();
-        self.actions = vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")];
+        self.actions = vec![action(ACTION_CONNECT, "Connect", "Connect to Discord")];
         self.update();
     }
 
     fn connect(&mut self) {
         let scope = SCOPES.join(" ");
         let url = url::Url::parse_with_params(
-            "https://id.twitch.tv/oauth2/authorize",
+            "https://discord.com/oauth2/authorize",
             &[
                 ("client_id", CLIENT_ID),
                 ("redirect_uri", REDIRECT_URI),
@@ -80,8 +80,8 @@ impl TwitchStatusWidget {
                 ("scope", scope.as_str()),
             ],
         )
-        .expect("valid twitch auth url");
-        auth::open_auth_window("Connect to Twitch", url.as_str());
+        .expect("valid discord auth url");
+        auth::open_auth_window("Connect to Discord", url.as_str());
         self.label = "Connecting".to_string();
         // Nothing to pick mid-flow.
         self.actions = vec![];

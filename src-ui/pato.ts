@@ -1,5 +1,5 @@
 import * as db from "./lib/db.js";
-import { PatoGrid, PatoHeader, PatoHeaderLeft, PatoHeaderCenter, PatoHeaderRight, PatoStatusWidgets } from "./components/index.js";
+import { PatoGrid, PatoHeader, PatoHeaderLeft, PatoHeaderCenter, PatoHeaderRight, PatoStatusWidgets, PatoSystemMenu } from "./components/index.js";
 import { callRust } from "./lib/bindings.js";
 import "./lib/db.js";
 import "./lib/storage.js";
@@ -17,7 +17,9 @@ export async function init() {
 }
 
 export async function initHeader() {
-  document.body.append(new PatoHeader(new PatoHeaderLeft(), new PatoHeaderCenter(), new PatoHeaderRight(new PatoStatusWidgets())));
+  document.body.append(
+    new PatoHeader(new PatoHeaderLeft(), new PatoHeaderCenter(), new PatoHeaderRight(new PatoStatusWidgets(), new PatoSystemMenu()))
+  );
 }
 
 init();

@@ -18,6 +18,7 @@ pub mod log;
 mod plugins;
 pub mod storage;
 pub mod ui;
+pub mod websocket;
 
 /// How often the epoch ticker bumps the engine's epoch. Plugin call deadlines
 /// are expressed as a number of these ticks.
@@ -129,6 +130,7 @@ pub async fn init() -> Result<(), String> {
     auth::init()?;
     storage::init()?;
     db::init()?;
+    websocket::init()?;
     freeze_linker()?;
     plugins::init().await?;
     Ok(())

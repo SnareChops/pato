@@ -20,6 +20,16 @@ const MANAGED_ATTRS = ["href", "src", "alt", "title", "name", "placeholder", "ro
 /** Pato listeners attached to a DOM node, so they can be torn off on re-render. */
 const listeners = new WeakMap<Element, Array<[string, EventListener]>>();
 
+/**
+ * A scrollable element within this many pixels of its bottom counts as "at
+ * the bottom" for the sticky-scroll behavior below.
+ */
+const STICK_TO_BOTTOM_PX = 24;
+
+function isNearBottom(el: HTMLElement): boolean {
+  return el.scrollHeight - el.scrollTop - el.clientHeight <= STICK_TO_BOTTOM_PX;
+}
+
 type Payload = { tag: "none" } | { tag: "text"; val: string } | { tag: "toggled"; val: boolean };
 
 function extractPayload(kind: EventKind, dom: Element): Payload {
@@ -74,11 +84,33 @@ export class PatoCustomWidget extends Component {
 
     const keyed = new Map<string, HTMLElement>();
     const slots = new Map<string, HTMLSpanElement>();
+    // Elements to pin to their bottom edge once the whole tree is back in
+    // the live document - see the comment below `stickToBottom` collects
+    // into, and why the write can't happen during `#build`.
+    const stickyBottom: HTMLElement[] = [];
 
     this.#applyElement(this.#root, root.kind.val);
+    // `.pato-root` is always a scroll container (base CSS), but it only
+    // *follows* new content when the plugin opts in with `sticky: bottom` -
+    // most widgets' root has nothing worth auto-following. Measured before
+    // mutating children.
+    if (root.kind.val.style?.sticky === "bottom" && isNearBottom(this.#root)) {
+      stickyBottom.push(this.#root);
+    }
     this.#root.replaceChildren(
-      ...(children.get(0) ?? []).map((ci) => this.#build(ci, nodes, children, keyed, slots)),
+      ...(children.get(0) ?? []).map((ci) => this.#build(ci, nodes, children, keyed, slots, stickyBottom)),
     );
+    // `replaceChildren` builds a DocumentFragment from its arguments, which
+    // detaches-then-reattaches even an already-current, reused child (ours,
+    // via the keyed map) - and browsers reset `scrollTop` to 0 across any
+    // disconnect, even a same-tick one. So a `scrollTop` write made *during*
+    // `#build`, while a sticky element's own ancestor chain up to `#root`
+    // hasn't finished being reattached, gets silently clobbered back to 0 a
+    // moment later ("jumps to top" on every update). Deferring every write
+    // to here - strictly after the one `replaceChildren` call that could
+    // still move things - is the fix: nothing gets reattached after this
+    // point during this render, so the write sticks.
+    for (const el of stickyBottom) el.scrollTop = el.scrollHeight;
 
     this.#keyed = keyed;
     this.#slots = slots;
@@ -96,6 +128,7 @@ export class PatoCustomWidget extends Component {
     children: Map<number, number[]>,
     keyed: Map<string, HTMLElement>,
     slots: Map<string, HTMLSpanElement>,
+    stickyBottom: HTMLElement[],
   ): ChildNode {
     const node = nodes[i];
     switch (node.kind.tag) {
@@ -113,7 +146,14 @@ export class PatoCustomWidget extends Component {
         let dom = el.key ? this.#keyed.get(el.key) : undefined;
         if (!dom || dom.tagName.toLowerCase() !== el.tag) dom = document.createElement(el.tag);
         this.#applyElement(dom, el);
-        dom.replaceChildren(...(children.get(i) ?? []).map((ci) => this.#build(ci, nodes, children, keyed, slots)));
+        // `sticky: bottom` opts a specific scrollable element into the same
+        // bottom-pinning as `.pato-root` - see `render()`. Only meaningful
+        // for a *reused* keyed node; a freshly created one has nothing to
+        // preserve. The actual `scrollTop` write is deferred - see `render()`.
+        if (el.style?.sticky === "bottom" && isNearBottom(dom)) stickyBottom.push(dom);
+        dom.replaceChildren(
+          ...(children.get(i) ?? []).map((ci) => this.#build(ci, nodes, children, keyed, slots, stickyBottom)),
+        );
         if (el.key) keyed.set(el.key, dom);
         return dom;
       }
@@ -196,7 +236,11 @@ export class PatoCustomWidget extends Component {
         if (binding.kind === "enter-key" && (ev as KeyboardEvent).key !== "Enter") return;
         void callRust("custom_widget_event", {
           widgetId: this.widgetId,
-          nodeKey: el.key ?? "",
+          // The firing *binding's* handler, not the element's own `key` -
+          // an element can carry several bindings (e.g. `input` to track
+          // live text and `enter-key` to submit) that need to be told apart
+          // on the way back. `key` is reconciliation identity only.
+          nodeKey: binding.handler,
           kind: binding.kind,
           payload: extractPayload(binding.kind, dom),
         });

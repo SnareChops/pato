@@ -10,11 +10,14 @@ use crate::exports::pato::plugin;
 use pato::plugin::storage;
 mod helix;
 mod http;
+mod irc;
 mod widgets;
 
 const CLIENT_ID: &str = "arr27bhvnowepylzv8qs2tgaqc66yb";
 const REDIRECT_URI: &str = "https://snarechops.net";
-const SCOPES: [&str; 1] = ["user:read:email"];
+// `chat:read` / `chat:edit` authorize the IRC login (`PASS oauth:<token>`)
+// used by the chat widget to read and send messages.
+const SCOPES: [&str; 3] = ["user:read:email", "chat:read", "chat:edit"];
 
 static PLUGIN: OnceLock<RwLock<PatoTwitch>> = OnceLock::new();
 
@@ -30,6 +33,7 @@ where
 struct PatoTwitch {
     status: widgets::TwitchStatusWidget,
     panel: widgets::TwitchPanel,
+    chat: widgets::TwitchChatWidget,
     helix: Option<helix::TwitchApi>,
     user: Option<helix::TwitchUser>,
 }
@@ -46,15 +50,21 @@ impl plugin::init::Guest for PatoTwitch {
 }
 
 impl plugin::widget_events::Guest for PatoTwitch {
-    // Pre-made status widget: click / action
-    fn on_status_event(widget_id: String, event: plugin::widget_events::StatusEvent) {
+    // Pre-made status widget: every interaction is a named action, no
+    // separate "clicked" event.
+    fn on_status_event(widget_id: String, action: String) {
         with_plugin(|plugin| {
             if plugin.status.id != widget_id {
                 return;
             }
-            match event {
-                plugin::widget_events::StatusEvent::Clicked => plugin.status.clicked(),
-                plugin::widget_events::StatusEvent::Action(action) => plugin.status.action(action),
+            // "disconnect" is handled centrally here since it affects every
+            // widget that depends on the Twitch connection, not just the
+            // status widget itself; everything else is the widget's own
+            // business.
+            if action == widgets::ACTION_DISCONNECT {
+                plugin.logout();
+            } else {
+                plugin.status.action(&action);
             }
         });
     }
@@ -64,12 +74,52 @@ impl plugin::widget_events::Guest for PatoTwitch {
         with_plugin(|plugin| {
             if event.node_key == widgets::HANDLER_REFRESH {
                 plugin.refresh_panel();
+                return;
+            }
+            match event.kind {
+                plugin::widget_events::EventKind::Input
+                | plugin::widget_events::EventKind::Change => {
+                    if let plugin::widget_events::Payload::Text(text) = event.payload {
+                        plugin.chat.on_input(&event.node_key, text);
+                    }
+                }
+                plugin::widget_events::EventKind::Click
+                | plugin::widget_events::EventKind::EnterKey => {
+                    let login = plugin.user.as_ref().map(|u| u.login.as_str());
+                    let token = plugin.helix.as_ref().map(|h| h.token());
+                    plugin.chat.on_click(&event.node_key, login, token);
+                }
+                _ => {}
             }
         });
     }
 
-    // Widget was (re)sized on the grid. The panel is responsive; nothing to do.
+    // Widget was (re)sized on the grid. Both custom widgets are responsive;
+    // nothing to do.
     fn on_layout(_layout: plugin::widget_events::WidgetLayout) {}
+}
+
+impl plugin::websocket_events::Guest for PatoTwitch {
+    // A chat line arrived on an open IRC connection.
+    fn on_message(id: String, data: String) {
+        with_plugin(|plugin| plugin.chat.on_message(&id, &data));
+    }
+
+    fn on_close(id: String, code: u16, reason: String) {
+        with_plugin(|plugin| {
+            plugin
+                .chat
+                .on_closed(&id, format!("Disconnected ({code}): {reason}"))
+        });
+    }
+
+    fn on_error(id: String, message: String) {
+        with_plugin(|plugin| {
+            plugin
+                .chat
+                .on_closed(&id, format!("Connection error: {message}"))
+        });
+    }
 }
 
 impl plugin::auth_events::Guest for PatoTwitch {
@@ -121,6 +171,7 @@ impl PatoTwitch {
         let mut plugin = Self {
             status: widgets::TwitchStatusWidget::new(),
             panel: widgets::TwitchPanel::new(),
+            chat: widgets::TwitchChatWidget::new(),
             helix,
             user,
         };
@@ -147,15 +198,23 @@ impl PatoTwitch {
                 Ok(())
             }
             Err(e) => {
-                // Clear any stale state and reset the widget
-                storage::del("auth_token");
-                self.helix = None;
-                self.user = None;
-                self.status.disconnected();
-                self.panel.set_user(None);
+                self.logout();
                 Err(e)
             }
         }
+    }
+
+    // Sign out of Twitch: drop the stored token and reset every widget that
+    // depends on the connection back to its disconnected state. Triggered
+    // either by the status widget's "Disconnect" action or by a token that
+    // turned out to be invalid.
+    fn logout(&mut self) {
+        storage::del("auth_token");
+        self.helix = None;
+        self.user = None;
+        self.status.disconnected();
+        self.panel.set_user(None);
+        self.chat.force_disconnect();
     }
 
     // Re-fetch the current user from Helix and push it to the panel.

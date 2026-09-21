@@ -1,7 +1,12 @@
 /.vscode
 pato-db/target/
+
+pato-discord/target/
+pato-discord/wit/deps/
+
 pato-twitch/target/
-pato-ui/target/
+pato-twitch/wit/deps/
+
 src-tauri/gen/
 src-tauri/target/
 src-tauri/plugins/

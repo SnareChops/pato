@@ -193,30 +193,13 @@ pub async fn widget_resized(widget_id: String, w: u32, h: u32) -> Result<(), Str
 }
 
 #[tauri::command]
-pub async fn status_widget_clicked(id: String) -> Result<(), String> {
-    let (plugin_name, widget_id) = split_id(&id)?;
-    wasm::plugin_call_by_name(
-        &plugin_name,
-        WIDGET_EVENTS,
-        "on-status-event",
-        vec![Val::String(widget_id), Val::Variant("clicked".into(), None)],
-        vec![],
-    )
-    .await?;
-    Ok(())
-}
-
-#[tauri::command]
 pub async fn status_widget_action(id: String, action: String) -> Result<(), String> {
     let (plugin_name, widget_id) = split_id(&id)?;
     wasm::plugin_call_by_name(
         &plugin_name,
         WIDGET_EVENTS,
         "on-status-event",
-        vec![
-            Val::String(widget_id),
-            Val::Variant("action".into(), Some(Box::new(Val::String(action)))),
-        ],
+        vec![Val::String(widget_id), Val::String(action)],
         vec![],
     )
     .await?;

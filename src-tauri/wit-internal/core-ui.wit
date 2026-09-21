@@ -74,6 +74,12 @@ interface widget-dom {
   variant size {
     auto, fill, percent(u32), fixed(space),
   }
+  enum overflow {
+    clip, scroll,
+  }
+  enum sticky-edge {
+    bottom,
+  }
   record style {
     layout: option<layout>,
     gap: option<space>,
@@ -89,6 +95,8 @@ interface widget-dom {
     wrap: option<bool>,
     width: option<size>,
     height: option<size>,
+    overflow: option<overflow>,
+    sticky: option<sticky-edge>,
   }
 
   // --- events -----------------------------------------------------------
@@ -212,7 +220,7 @@ interface ui-signals {
   }
   record interaction {
     widget-id: string,
-    // element `key`, or "" if none was set
+    // the firing binding's `handler` - see `binding` in `widget-dom`
     node-key: string,
     kind: event-kind,
     payload: payload,

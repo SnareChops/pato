@@ -141,6 +141,27 @@ interface widget-dom {
     // a step from the spacing scale
     fixed(space),
   }
+  // Whether an element clips its own overflow (the default everywhere,
+  // matching the widget's own host box) or scrolls it. No other values
+  // (visible bleed, per-axis control) are exposed — a scrollable element
+  // always clips both axes and scrolls vertically.
+  enum overflow {
+    clip, scroll,
+  }
+  // Opt-in scroll-follow for one specific scrollable element (paired with
+  // `overflow: scroll`) — NOT implied by `overflow: scroll` alone, since
+  // plenty of scrollable content (tables, leaderboards, ...) shouldn't auto-
+  // follow. `bottom` keeps the element scrolled to its bottom edge across
+  // re-renders as long as the viewer hasn't scrolled away from it (the
+  // "new chat message" pattern). This is a declared intent, not an
+  // imperative command: the core/webview measure real scroll position and
+  // decide whether to follow — the plugin never sees scroll position or any
+  // other pixel measurement. v1: a single fixed edge; may grow (e.g. an
+  // anchor-node approach for scrolling to an arbitrary item) if a real need
+  // for more than "stick to bottom" shows up.
+  enum sticky-edge {
+    bottom,
+  }
   record style {
     layout: option<layout>,
     gap: option<space>,
@@ -156,6 +177,8 @@ interface widget-dom {
     wrap: option<bool>,
     width: option<size>,
     height: option<size>,
+    overflow: option<overflow>,
+    sticky: option<sticky-edge>,
   }
 
   // --- events ------------------------------------------------------------
@@ -183,7 +206,8 @@ interface widget-dom {
   record element {
     // Optional reconciliation key. Stable keys preserve DOM identity (focus,
     // scroll, selection, IME) across re-renders and are required for lists
-    // that reorder. Echoed back as `node-key` on events.
+    // that reorder. Reconciliation identity only - see `binding.handler` for
+    // what's echoed back on events.
     key: option<string>,
     tag: tag,
     attrs: list<attr>,
@@ -274,11 +298,10 @@ interface widget-events {
   use widget-dom.{event-kind, tile-size};
 
   // --- status-widget -------------------------------------------------
-  variant status-event {
-    clicked,
-    action(string),
-  }
-  on-status-event: func(widget-id: string, event: status-event);
+  // A user picked one of the widget's declared `action`s. There is no
+  // separate "clicked" event — a status widget with nothing to do declares
+  // no actions, and interaction always resolves to one of them by id.
+  on-status-event: func(widget-id: string, action: string);
 
   // --- custom-widget ----------------------------------------------
   // Only whitelisted values, built by the core — never a raw DOM event.
@@ -294,7 +317,7 @@ interface widget-events {
   }
   record widget-event {
     widget-id: string,
-    // element `key`, or "" if none was set
+    // the firing binding's `handler` - see `binding` in `widget-dom`
     node-key: string,
     kind: event-kind,
     payload: payload,
@@ -319,6 +342,31 @@ interface auth-events {
   // Triggered when the OAuth flow is completed / cancelled or otherwise closed
   // If success is false, the auth flow failed or was cancelled in some way
   on-auth: func(success: bool, response: option<string>) -> result<_, string>;
+}
+
+// A generic, vendor-agnostic secure WebSocket relay. The core owns the real
+// socket (trust boundary, same role as wasi:http's outgoing-handler for plain
+// HTTP) but knows nothing about what's sent over it - every byte of the wire
+// protocol (handshake, framing, message semantics) is the plugin's own logic.
+// Only `wss:` URLs are permitted; the core never inspects payloads.
+interface websocket {
+  // Opens a connection and blocks until it is established. Returns a
+  // connection id scoped to the calling plugin, or an error message.
+  connect: func(url: string) -> result<string, string>;
+  // Sends a text frame on a connection owned by the calling plugin.
+  send: func(id: string, data: string) -> bool;
+  // Closes a connection owned by the calling plugin.
+  close: func(id: string);
+}
+
+interface websocket-events {
+  // A text frame arrived.
+  on-message: func(id: string, data: string);
+  // The connection closed (by the peer or the network); `id` is no longer
+  // valid.
+  on-close: func(id: string, code: u16, reason: string);
+  // The connection failed after being established (e.g. a read/write error).
+  on-error: func(id: string, message: string);
 }
 
 world plugin {
@@ -348,4 +396,7 @@ world host {
 world oauth {
   import auth;
   export auth-events;
+}
+world websocket-host {
+  import websocket;
 }

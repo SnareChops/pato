@@ -85,17 +85,16 @@ pato-grid {
   box-sizing: border-box;
   overflow: auto;
 
-  /* Cell colour underneath; gap colour painted as a band at the start of every
-   * (tile + gap) step, then shifted by one tile so the bands land in the
-   * gutters between columns/rows rather than before the first one. */
-  background-color: var(--pato-grid-cell);
-  background-image:
-    linear-gradient(to right, var(--pato-grid-line) var(--pato-grid-gap), transparent 0),
-    linear-gradient(to bottom, var(--pato-grid-line) var(--pato-grid-gap), transparent 0);
-  background-size:
-    calc(var(--pato-grid-tile) + var(--pato-grid-gap)) calc(var(--pato-grid-tile) + var(--pato-grid-gap));
-  background-position: var(--pato-grid-tile) var(--pato-grid-tile);
-  background-attachment: local;
+  /* The grid's own background is the "line" colour. `gap` is never covered by
+   * any grid item, so it's the only place this shows through - every item
+   * (a widget's `.pato-cell`, or a `.pato-grid-filler` standing in for an
+   * empty cell) paints itself the "cell" colour over its own box. This reuses
+   * the browser's real gap rendering instead of approximating it with a
+   * background-image gradient sized to a separately-computed tile pitch,
+   * which only ever drifted from the actual column pitch by a sub-pixel
+   * amount per column that compounded visibly toward the far edge.
+   */
+  background-color: var(--pato-grid-line);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -116,12 +115,28 @@ pato-grid > * {
   overflow: hidden;
 }
 
+/* Occupies a real 1x1 grid cell purely so its rendered width can be measured
+ * (see PatoGrid#syncTile) - explicit placement means it's free to overlap a
+ * real widget in that cell without affecting it. */
+.pato-tile-gauge {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 /* Custom-widget cell: span + aspect-ratio are set inline from the tile size. */
 pato-grid > .pato-cell {
   position: relative;
   aspect-ratio: auto;
   overflow: visible;
   min-width: 0;
+  background-color: var(--pato-grid-cell);
+}
+
+/* Stands in for an empty cell so the "line"-coloured gap never bleeds into
+ * cell interiors; kept in sync with actual occupancy by PatoGrid#syncFillers. */
+.pato-grid-filler {
+  background-color: var(--pato-grid-cell);
+  pointer-events: none;
 }
 .pato-cell > pato-custom-widget {
   position: absolute;
@@ -141,6 +156,40 @@ pato-grid > .pato-cell {
 }
 .pato-cell > .pato-resize:hover {
   opacity: 1;
+}
+pato-grid.locked .pato-resize {
+  display: none;
+}
+.pato-cell > .pato-drag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--pato-color-fg-muted);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  z-index: 2;
+  opacity: 0.45;
+}
+.pato-cell > .pato-drag:hover {
+  opacity: 1;
+}
+.pato-cell > .pato-drag:active {
+  cursor: grabbing;
+}
+pato-grid.locked .pato-drag {
+  display: none;
+}
+.pato-cell.dragging {
+  z-index: 3;
+  opacity: 0.85;
 }
 
 button-widget {
@@ -177,7 +226,7 @@ button-widget {
 
 status-widget {
   display:inline-flex;
-  align-items: center;
+  /* align-items: center; */
   padding: 4px 12px;
   background: rgba(255,255,255,0.15);
   border: 1px solid rgba(255,255,255,0.2);
@@ -193,4 +242,94 @@ status-widget {
     max-height: 40px;
     max-width: 40px;
   }
+}
+/* Only a widget with actions to pick from invites a click. */
+status-widget.has-actions {
+  cursor: pointer;
+}
+
+.status-widget-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  min-width: 140px;
+  background: var(--pato-color-bg-raised);
+  border: 1px solid var(--pato-color-border);
+  border-radius: var(--pato-radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+}
+.status-widget-menu.open {
+  display: flex;
+}
+.status-widget-menu button {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--pato-radius-md);
+  font-size: var(--pato-text-sm);
+  color: var(--pato-color-fg);
+  white-space: nowrap;
+}
+.status-widget-menu button:hover {
+  background: var(--pato-color-bg);
+}
+
+.system-menu-button {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+.system-menu-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.system-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  min-width: 160px;
+  background: var(--pato-color-bg-raised);
+  border: 1px solid var(--pato-color-border);
+  border-radius: var(--pato-radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+}
+.system-menu.open {
+  display: flex;
+}
+.system-menu button {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: var(--pato-radius-md);
+  font-size: var(--pato-text-sm);
+  color: var(--pato-color-fg);
+  white-space: nowrap;
+}
+.system-menu button:hover {
+  background: var(--pato-color-bg);
 }

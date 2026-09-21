@@ -96,6 +96,10 @@ export function styleToCss(style: Style | undefined): string {
   if (style.wrap) out.push("flex-wrap:wrap");
   if (style.width) out.push(`width:${sizeToCss(style.width)}`);
   if (style.height) out.push(`height:${sizeToCss(style.height)}`);
+  // `scroll` needs `min-height:0`/`min-width:0` alongside it or a flex child
+  // never shrinks below its content size and the scrollbar never appears.
+  if (style.overflow === "scroll") out.push("overflow:auto", "min-height:0", "min-width:0");
+  if (style.overflow === "clip") out.push("overflow:clip");
 
   return out.join(";");
 }

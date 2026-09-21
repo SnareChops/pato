@@ -228,12 +228,18 @@ variant payload {
 }
 record event {
   widget-id: string,
-  node-key: string,
+  node-key: string,   // the firing binding's `handler`, not the element's `key`
   kind: event-kind,
   payload: payload,
 }
 on-event: func(event: event);
 ```
+
+`key` and `handler` serve different jobs: `key` is reconciliation identity
+(which DOM node survives a re-render), `handler` is what comes back on
+`node-key` so the plugin can tell bindings apart — needed whenever one
+element carries more than one binding (e.g. an `input` binding that tracks
+live text plus an `enter-key` binding that submits).
 
 Never forwarded: `target` properties, screen/client coordinates,
 `relatedTarget`, clipboard, key modifiers beyond an explicit need. The core

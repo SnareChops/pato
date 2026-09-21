@@ -107,6 +107,16 @@ impl From<dom::Size> for Size {
     }
 }
 
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum Overflow { Clip, Scroll }
+enum_from!(dom::Overflow => Overflow { Clip, Scroll });
+
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum StickyEdge { Bottom }
+enum_from!(dom::StickyEdge => StickyEdge { Bottom });
+
 #[derive(Serialize, Clone, PartialEq, Debug)]
 #[serde(tag = "tag", content = "val", rename_all = "kebab-case")]
 pub enum Attr {
@@ -157,6 +167,10 @@ pub struct Style {
     pub width: Option<Size>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub height: Option<Size>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub overflow: Option<Overflow>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sticky: Option<StickyEdge>,
 }
 impl From<dom::Style> for Style {
     fn from(s: dom::Style) -> Self {
@@ -175,6 +189,8 @@ impl From<dom::Style> for Style {
             wrap: s.wrap,
             width: s.width.map(Into::into),
             height: s.height.map(Into::into),
+            overflow: s.overflow.map(Into::into),
+            sticky: s.sticky.map(Into::into),
         }
     }
 }
