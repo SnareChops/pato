@@ -259,10 +259,22 @@ interface widgets {
     text: string,
     description: option<string>,
   }
+  // Connection state, drawn by the core as a badge beside the icon (green
+  // check / red X / amber dots / amber "!") so the label needn't spell it out.
+  enum link-state {
+    disconnected,
+    connecting,
+    // Connected-ish but waiting on the user, e.g. "approve in VTube Studio".
+    attention,
+    connected,
+  }
   record status-widget {
     id: string,
     icon: string,
+    // Extra detail shown beside the badge (e.g. the signed-in username).
+    // Leave empty when the badge and tooltip say it all.
     label: string,
+    state: link-state,
     tooltip: option<string>,
     actions: list<action>,
   }

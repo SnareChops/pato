@@ -253,7 +253,24 @@ status-widget img.platform-icon {
   width: 18px;
   align-self: center;
   margin-right: 6px;
+  object-fit: contain;
 }
+/* Connection badge beside the brand icon. Glyph shape differs per state so it
+   doesn't rely on colour alone. */
+status-widget .status-badge {
+  align-self: center;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  min-width: 1em;
+  text-align: center;
+}
+status-widget .status-badge.connected { color: #3ddc84; }
+status-widget .status-badge.disconnected { color: #ff5c5c; }
+status-widget .status-badge.connecting,
+status-widget .status-badge.attention { color: #ffb020; }
+status-widget p { margin: 0; }
+status-widget p:not(.empty) { margin-left: 6px; }
 /* Only a widget with actions to pick from invites a click. */
 status-widget.has-actions {
   cursor: pointer;

@@ -41,8 +41,14 @@ impl widgets::Host for crate::wasm::HostData {
         let vw = match widget {
             widgets::Widget::StatusWidget(w) => view::Widget::StatusWidget(view::StatusWidget {
                 id: format!("{}|{}", self.name, w.id),
-                icon: w.icon,
+                icon: validate::url(&w.icon, &self.name).unwrap_or_default(),
                 label: w.label,
+                state: match w.state {
+                    widgets::LinkState::Disconnected => view::LinkState::Disconnected,
+                    widgets::LinkState::Connecting => view::LinkState::Connecting,
+                    widgets::LinkState::Attention => view::LinkState::Attention,
+                    widgets::LinkState::Connected => view::LinkState::Connected,
+                },
                 tooltip: w.tooltip,
                 actions: w
                     .actions

@@ -235,6 +235,11 @@ async fn plugin_call_by_name(
     plugin_call(&pid, interface, func, params, default).await
 }
 
+/// Case- and `-`/`_`-insensitive form of a plugin name, for collision checks.
+pub fn canonical_plugin_name(name: &str) -> String {
+    name.to_ascii_lowercase().replace('-', "_")
+}
+
 /// Compiles and loads a plugin onto its own dedicated OS thread, with its own
 /// `Store` (and therefore its own WASI context and resource table). Returns
 /// once the plugin has been instantiated and is ready to receive calls.
@@ -246,6 +251,13 @@ pub async fn load_plugin(path: PathBuf) -> Result<String, String> {
         .and_then(|s| s.to_str())
         .ok_or_else(|| "Invalid plugin filename".to_string())?
         .to_string();
+    if broker()
+        .names
+        .iter()
+        .any(|e| canonical_plugin_name(e.key()) == canonical_plugin_name(&name))
+    {
+        return Err(format!("A plugin named `{name}` is already loaded"));
+    }
     let root = path
         .parent()
         .map(|p| p.to_path_buf())

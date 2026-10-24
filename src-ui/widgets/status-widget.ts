@@ -1,11 +1,13 @@
 import { callRust } from "../lib/bindings.js";
 import { Component, component } from "../lib/component.js";
-import { button, div, img, p, Element } from "../lib/html.js";
+import { button, div, img, p, span, Element } from "../lib/html.js";
 
+export type LinkState = "disconnected" | "connecting" | "attention" | "connected";
 export type StatusWidgetDef = {
   id: string;
   icon: string;
   label: string;
+  state: LinkState;
   tooltip?: string;
   actions?: StatusWidgetAction[];
 };
@@ -16,20 +18,34 @@ export type StatusWidgetAction = {
 };
 export class StatusWidget extends Component {
   #icon: Element = img();
+  #badge: Element = span({ class: "status-badge" });
   #label: Element = p();
   #menu: Element = div({ class: "status-widget-menu" });
   #actions: StatusWidgetAction[] = [];
   #open = false;
 
-  // `platform:<name>` selects a bundled brand icon; anything else is a URL.
+  // The core has already validated the URL. `pato-asset://` icons are plugin
+  // brand icons and get the small inline treatment.
   set icon(value: string) {
-    const platform = value?.startsWith("platform:") ? value.slice("platform:".length) : null;
-    this.#icon.attr({ src: platform ? `/assets/platforms/${platform}.svg` : (value ?? "") });
-    this.#icon.class(platform ? "platform-icon" : "");
+    const brand = value?.startsWith("pato-asset://") ?? false;
+    this.#icon.attr({ src: value ?? "" });
+    this.#icon.class(brand ? "platform-icon" : "");
+  }
+  // Shape, not just colour, carries the state (check / X / dots / !), and the
+  // title text is what a screen reader hears.
+  set state(value: LinkState) {
+    const glyph = { connected: "\u2713", disconnected: "\u2715", connecting: "\u2026", attention: "!" }[value];
+    const text = { connected: "Connected", disconnected: "Not connected", connecting: "Connecting", attention: "Needs attention" }[value];
+    this.#badge.clear();
+    this.#badge.text(glyph ?? "");
+    this.#badge.class(`status-badge ${value}`);
+    this.#badge.attr({ role: "img", "aria-label": text ?? "" });
   }
   set label(value: string) {
     this.#label.clear();
     this.#label.text(value ?? "");
+    // An empty label would still leave a gap from the flex gap/margins.
+    this.#label.class(value ? "" : "empty");
   }
   set tooltip(value: string | undefined) {
     this.title = value ?? "";
@@ -46,7 +62,7 @@ export class StatusWidget extends Component {
 
   connectedCallback() {
     this.setStyle({ position: "relative" });
-    this.append(this.#icon, this.#label, this.#menu);
+    this.append(this.#icon, this.#badge, this.#label, this.#menu);
     this.on("click", (ev: Event) => this.onClick(ev));
     // Closing the dropdown on an outside click is the standard pattern for
     // this kind of menu; `capture` so it still fires even if the click

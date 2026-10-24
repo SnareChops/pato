@@ -54,6 +54,9 @@ struct PatoVts {
     /// so the saved position is where the model is now, not up to a poll ago.
     capture_pending: bool,
     poll_timer: Option<String>,
+    /// Bumped on every model switch so the <select> is rebuilt (see
+    /// `on_model_click`).
+    switch_epoch: u32,
 }
 
 enum Editing {
@@ -104,7 +107,12 @@ impl plugin::widget_events::Guest for PatoVts {
                 }
             } else if event.widget_id == widgets::model::WIDGET_ID {
                 match event.kind {
-                    EventKind::Click => plugin.on_model_click(&event.node_key),
+                    EventKind::Click => plugin.on_model_click(&event.node_key, ""),
+                    EventKind::Change => {
+                        if let Payload::Text(id) = &event.payload {
+                            plugin.on_model_click(&event.node_key, id);
+                        }
+                    }
                     EventKind::ContextMenu => plugin.on_model_context_menu(&event.node_key),
                     _ => {}
                 }
@@ -176,6 +184,7 @@ impl PatoVts {
             editing: None,
             capture_pending: false,
             poll_timer: None,
+            switch_epoch: 0,
         };
         plugin.render_model();
         if pato::plugin::storage::get(KEY_TOKEN).is_some_and(|t| !t.is_empty()) {
@@ -190,7 +199,7 @@ impl PatoVts {
     }
 
     fn render_model(&self) {
-        self.model_widget.render(self.vts.is_connected(), &self.model, &self.positions.presets);
+        self.model_widget.render(self.vts.is_connected(), &self.model, &self.positions.presets, self.switch_epoch);
     }
 
     /// Handshake finished: subscribe to events and load the initial state.
@@ -203,6 +212,7 @@ impl PatoVts {
 
     fn fetch_all(&self) {
         self.vts.send(&protocol::current_model());
+        self.vts.send(&protocol::available_models());
         self.vts.send(&protocol::expression_state());
         self.vts.send(&protocol::hotkeys_in_current_model());
         self.vts.send(&protocol::face_found());
@@ -291,8 +301,17 @@ impl PatoVts {
         }
     }
 
-    fn on_model_click(&mut self, handler: &str) {
-        if let Some(file) = handler.strip_prefix(widgets::model::PREFIX_EXPRESSION) {
+    fn on_model_click(&mut self, handler: &str, model_id: &str) {
+        if handler.starts_with(widgets::model::PREFIX_SWITCH_MODEL) {
+            // Rebuild the <select> (new key) so it snaps back to its
+            // placeholder whether or not VTS accepts the load (it has a 2s
+            // cooldown and can refuse).
+            self.switch_epoch = self.switch_epoch.wrapping_add(1);
+            if !model_id.is_empty() {
+                self.vts.send(&protocol::model_load(model_id));
+            }
+            self.render_model();
+        } else if let Some(file) = handler.strip_prefix(widgets::model::PREFIX_EXPRESSION) {
             let Some(active) = self.model.expressions.iter().find(|e| e.file == file).map(|e| e.active) else {
                 return;
             };

@@ -43,6 +43,14 @@ cp pato-obs/target/wasm32-wasip2/release/pato_obs.wasm src-tauri/plugins/pato_ob
 cp pato-commands/target/wasm32-wasip2/release/pato_commands.wasm src-tauri/plugins/pato_commands_0_1_0/pato_commands.wasm
 cp pato-vts/target/wasm32-wasip2/release/pato_vts.wasm src-tauri/plugins/pato_vts_0_1_0/pato_vts.wasm
 
+# Plugin assets (served as pato-asset://<plugin>/<path>)
+for p in discord twitch obs commands vts; do
+  if [ -d "pato-$p/assets" ]; then
+    rm -rf "src-tauri/plugins/pato_${p}_0_1_0/assets"
+    cp -r "pato-$p/assets" "src-tauri/plugins/pato_${p}_0_1_0/assets"
+  fi
+done
+
 # Fetch 1st-party plugins' public APIs (e.g. pato-obs's `pato:pato-obs/scenes`)
 # for the host-side broker - see src-tauri/src/wasm/obs_broker.rs.
 cd src-tauri

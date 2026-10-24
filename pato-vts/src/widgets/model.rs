@@ -15,6 +15,8 @@ pub const PREFIX_HOTKEY: &str = "hk:";
 pub const PREFIX_POSITION: &str = "pos:";
 /// Right-click on a saved position.
 pub const PREFIX_POSITION_MENU: &str = "posmenu:";
+/// Change on the model switcher; the rest is a render counter (see `header`).
+pub const PREFIX_SWITCH_MODEL: &str = "switch-model:";
 pub const HANDLER_ADD_POSITION: &str = "pos-add";
 
 /// One button in a `section`.
@@ -40,7 +42,7 @@ impl VtsModelWidget {
         VtsModelWidget
     }
 
-    pub fn render(&self, connected: bool, model: &Model, presets: &[Preset]) {
+    pub fn render(&self, connected: bool, model: &Model, presets: &[Preset], switch_epoch: u32) {
         let mut b = Builder::default();
         let root = b.element(
             None,
@@ -59,10 +61,10 @@ impl VtsModelWidget {
 
         if !connected {
             muted(&mut b, root, "Not connected to VTube Studio");
-        } else if !model.loaded {
-            muted(&mut b, root, "No model loaded");
         } else {
-            header(&mut b, root, model);
+            header(&mut b, root, model, switch_epoch);
+        }
+        if connected && model.loaded {
             if let Some(p) = &model.position {
                 let line = b.element(Some(root), text_style(dom::ThemeColor::FgMuted, dom::TextSize::Sm));
                 b.text(
@@ -111,7 +113,7 @@ impl VtsModelWidget {
     }
 }
 
-fn header(b: &mut Builder, root: u32, model: &Model) {
+fn header(b: &mut Builder, root: u32, model: &Model, switch_epoch: u32) {
     let row = b.element(
         Some(root),
         dom::Element {
@@ -125,8 +127,28 @@ fn header(b: &mut Builder, root: u32, model: &Model) {
             ..plain(dom::Tag::Div)
         },
     );
-    let name = b.element(Some(row), plain(dom::Tag::Strong));
-    b.text(name, &model.name);
+    let left = b.element(
+        Some(row),
+        dom::Element {
+            style: Some(dom::Style {
+                layout: Some(dom::Layout::FlexRow),
+                align: Some(dom::Align::Center),
+                gap: Some(dom::Space::Md),
+                ..blank_style()
+            }),
+            ..plain(dom::Tag::Div)
+        },
+    );
+    if model.loaded {
+        let name = b.element(Some(left), plain(dom::Tag::Strong));
+        b.text(name, &model.name);
+    } else {
+        muted(b, left, "No model loaded");
+    }
+    model_switcher(b, left, model, switch_epoch);
+    if !model.loaded {
+        return;
+    }
     if let Some(found) = model.face_found {
         let (color, text) = if found {
             (dom::ThemeColor::Success, "\u{25cf} Tracking")
@@ -135,6 +157,54 @@ fn header(b: &mut Builder, root: u32, model: &Model) {
         };
         let tag = b.element(Some(row), text_style(color, dom::TextSize::Sm));
         b.text(tag, text);
+    }
+}
+
+/// A dropdown of every model VTS can load. It always sits on its placeholder;
+/// picking an entry loads that model. The key carries `switch_epoch` so each
+/// pick rebuilds the element, putting it back on the placeholder even if VTS
+/// refuses the load.
+fn model_switcher(b: &mut Builder, parent: u32, model: &Model, switch_epoch: u32) {
+    if model.available.is_empty() {
+        return;
+    }
+    let select = b.element(
+        Some(parent),
+        dom::Element {
+            key: Some(format!("{PREFIX_SWITCH_MODEL}{switch_epoch}")),
+            attrs: vec![dom::Attr::Title("Switch model".to_string())],
+            events: vec![dom::Binding {
+                kind: dom::EventKind::Change,
+                handler: format!("{PREFIX_SWITCH_MODEL}{switch_epoch}"),
+            }],
+            style: Some(dom::Style {
+                padding: Some(dom::Space::Sm),
+                radius: Some(dom::Space::Sm),
+                background: Some(dom::ThemeColor::BgRaised),
+                color: Some(dom::ThemeColor::Fg),
+                ..blank_style()
+            }),
+            ..plain(dom::Tag::Select)
+        },
+    );
+    let placeholder = b.element(
+        Some(select),
+        dom::Element {
+            attrs: vec![dom::Attr::Value(String::new())],
+            ..plain(dom::Tag::Option)
+        },
+    );
+    b.text(placeholder, "Switch model\u{2026}");
+    for m in &model.available {
+        let option = b.element(
+            Some(select),
+            dom::Element {
+                attrs: vec![dom::Attr::Value(m.id.clone())],
+                ..plain(dom::Tag::Option)
+            },
+        );
+        let current = model.loaded && m.id == model.id();
+        b.text(option, &if current { format!("\u{2713} {}", m.name) } else { m.name.clone() });
     }
 }
 

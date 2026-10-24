@@ -271,11 +271,16 @@ pub struct Action {
     pub tooltip: Option<String>,
 }
 
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum LinkState { Disconnected, Connecting, Attention, Connected }
+
 #[derive(Serialize, Clone, PartialEq, Debug)]
 pub struct StatusWidget {
     pub id: String,
     pub icon: String,
     pub label: String,
+    pub state: LinkState,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tooltip: Option<String>,
     pub actions: Vec<Action>,
@@ -347,6 +352,7 @@ mod tests {
             id: "twitch|live".into(),
             icon: "i".into(),
             label: "l".into(),
+            state: LinkState::Attention,
             tooltip: None,
             actions: vec![Action {
                 id: "a".into(),
@@ -362,6 +368,7 @@ mod tests {
                     "id": "twitch|live",
                     "icon": "i",
                     "label": "l",
+                    "state": "attention",
                     "actions": [{ "id": "a", "label": "Go", "tooltip": "t" }],
                 }
             })

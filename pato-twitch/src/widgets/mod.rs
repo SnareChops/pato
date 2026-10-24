@@ -11,12 +11,12 @@ pub use status::{TwitchStatusWidget, ACTION_DISCONNECT, ACTION_PRIMARY_CHANNEL};
 use crate::pato::plugin::widget_dom as dom;
 
 /// The Twitch brand icon, drawn small next to a widget's heading so it is
-/// obvious at a glance which platform the widget controls. `platform:twitch`
-/// is resolved by the core to a bundled asset.
+/// obvious at a glance which platform the widget controls. Served from this
+/// plugin's own `assets/icon.svg`.
 pub(crate) fn platform_badge() -> dom::Element {
     dom::Element {
         attrs: vec![
-            dom::Attr::Src("platform:twitch".into()),
+            dom::Attr::Src("pato-asset:icon.svg".into()),
             dom::Attr::Alt("Twitch".into()),
         ],
         style: Some(dom::Style {

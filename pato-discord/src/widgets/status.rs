@@ -26,12 +26,16 @@ const ACTION_CONNECT: &str = "connect";
 // every widget that depends on the connection - not just this one.
 pub const ACTION_DISCONNECT: &str = "disconnect";
 
+// The brand icon ships in this plugin's own `assets/`.
+const ICON: &str = "pato-asset:icon.svg";
+
 impl DiscordStatusWidget {
     pub fn new() -> Self {
         let widget = Self(widgets::StatusWidget {
             id: "discord_status".to_string(),
-            icon: "".to_string(),
-            label: "Connect".to_string(),
+            icon: ICON.to_string(),
+            label: String::new(),
+            state: widgets::LinkState::Disconnected,
             tooltip: Some("Discord".to_string()),
             actions: vec![action(ACTION_CONNECT, "Connect", "Connect to Discord")],
         });
@@ -56,15 +60,15 @@ impl DiscordStatusWidget {
     // widget's dropdown.
     pub fn connected(&mut self, user: &DiscordUser) {
         self.label = user.display_name().to_string();
-        self.icon = user.avatar_url();
+        self.state = widgets::LinkState::Connected;
         self.actions = vec![action(ACTION_DISCONNECT, "Disconnect", "Sign out of Discord")];
         self.update();
     }
 
     // Reset the widget to the disconnected "Connect" state
     pub fn disconnected(&mut self) {
-        self.label = "Connect".to_string();
-        self.icon = "".to_string();
+        self.label = String::new();
+        self.state = widgets::LinkState::Disconnected;
         self.actions = vec![action(ACTION_CONNECT, "Connect", "Connect to Discord")];
         self.update();
     }
@@ -82,7 +86,8 @@ impl DiscordStatusWidget {
         )
         .expect("valid discord auth url");
         auth::open_auth_window("Connect to Discord", url.as_str());
-        self.label = "Connecting".to_string();
+        self.label = String::new();
+        self.state = widgets::LinkState::Connecting;
         // Nothing to pick mid-flow.
         self.actions = vec![];
         self.update();

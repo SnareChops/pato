@@ -32,6 +32,15 @@ pub struct Hotkey {
     pub id: String,
 }
 
+/// A model VTS can load.
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+pub struct Available {
+    #[serde(rename = "modelID")]
+    pub id: String,
+    #[serde(rename = "modelName", default)]
+    pub name: String,
+}
+
 /// `ToggleExpression` hotkeys are the expressions section's buttons already.
 const HOTKEY_TYPE_TOGGLE_EXPRESSION: &str = "ToggleExpression";
 
@@ -44,6 +53,8 @@ pub struct Model {
     pub face_found: Option<bool>,
     pub expressions: Vec<Expression>,
     pub hotkeys: Vec<Hotkey>,
+    /// Every model VTS can load, for the switcher.
+    pub available: Vec<Available>,
 }
 
 /// What folding a message in did.
@@ -85,6 +96,7 @@ impl Model {
         let mut refresh = false;
         match message_type {
             "CurrentModelResponse" => refresh = self.on_current_model(data),
+            "AvailableModelsResponse" => self.on_available(data),
             "ExpressionStateResponse" => self.on_expressions(data),
             "HotkeysInCurrentModelResponse" => self.on_hotkeys(data),
             "FaceFoundResponse" => {
@@ -118,8 +130,10 @@ impl Model {
         if !res.loaded {
             let had_model = self.loaded;
             let face = self.face_found;
+            let available = std::mem::take(&mut self.available);
             self.reset();
             self.face_found = face;
+            self.available = available;
             return had_model;
         }
         let switched = res.id != self.id;
@@ -132,6 +146,17 @@ impl Model {
         self.id = res.id;
         self.position = res.position;
         switched
+    }
+
+    fn on_available(&mut self, data: Value) {
+        #[derive(Deserialize)]
+        struct Res {
+            #[serde(rename = "availableModels", default)]
+            models: Vec<Available>,
+        }
+        if let Ok(res) = serde_json::from_value::<Res>(data) {
+            self.available = res.models;
+        }
     }
 
     fn on_expressions(&mut self, data: Value) {
@@ -204,6 +229,20 @@ mod tests {
         m.apply("CurrentModelResponse", json!({ "modelLoaded": false }));
         assert!(!m.loaded);
         assert_eq!(m.face_found, Some(true));
+    }
+
+    #[test]
+    fn available_models_survive_unloading() {
+        let mut m = Model::default();
+        m.apply(
+            "AvailableModelsResponse",
+            json!({ "availableModels": [{ "modelID": "a", "modelName": "A" }, { "modelID": "b", "modelName": "B" }] }),
+        );
+        m.apply("CurrentModelResponse", current("a", "A"));
+        m.apply("CurrentModelResponse", json!({ "modelLoaded": false }));
+        assert_eq!(m.available.len(), 2);
+        m.reset();
+        assert!(m.available.is_empty());
     }
 
     #[test]

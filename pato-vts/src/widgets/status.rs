@@ -7,14 +7,18 @@ pub const ID: &str = "vts_status";
 pub const ACTION_CONNECT: &str = "connect";
 pub const ACTION_DISCONNECT: &str = "disconnect";
 
+// The brand icon ships in this plugin's own `assets/`.
+const ICON: &str = "pato-asset:icon.png";
+
 pub struct VtsStatusWidget(widgets::StatusWidget);
 
 impl VtsStatusWidget {
     pub fn new() -> Self {
         let widget = Self(widgets::StatusWidget {
             id: ID.to_string(),
-            icon: String::new(),
-            label: "Connect".to_string(),
+            icon: ICON.to_string(),
+            label: String::new(),
+            state: widgets::LinkState::Disconnected,
             tooltip: Some("VTube Studio".to_string()),
             actions: vec![connect_action()],
         });
@@ -27,7 +31,7 @@ impl VtsStatusWidget {
     }
 
     pub fn connecting(&mut self) {
-        self.0.label = "Connecting\u{2026}".to_string();
+        self.0.state = widgets::LinkState::Connecting;
         self.0.tooltip = Some("VTube Studio".to_string());
         self.0.actions = vec![]; // nothing to pick mid-handshake
         self.push();
@@ -35,21 +39,21 @@ impl VtsStatusWidget {
 
     /// The token request is out; the user has to click Allow in VTS.
     pub fn awaiting_approval(&mut self) {
-        self.0.label = "Approve in VTS".to_string();
+        self.0.state = widgets::LinkState::Attention;
         self.0.tooltip = Some("VTube Studio \u{2014} approve the plugin popup in VTube Studio".to_string());
         self.0.actions = vec![disconnect_action("Cancel")];
         self.push();
     }
 
     pub fn connected(&mut self) {
-        self.0.label = "Connected".to_string();
+        self.0.state = widgets::LinkState::Connected;
         self.0.tooltip = Some("VTube Studio".to_string());
         self.0.actions = vec![disconnect_action("Disconnect")];
         self.push();
     }
 
     pub fn disconnected(&mut self, error: Option<&str>) {
-        self.0.label = "Connect".to_string();
+        self.0.state = widgets::LinkState::Disconnected;
         self.0.tooltip = Some(error.map(|e| format!("VTube Studio: {e}")).unwrap_or_else(|| "VTube Studio".to_string()));
         self.0.actions = vec![connect_action()];
         self.push();

@@ -4,7 +4,12 @@
 //! (the core rewrites a plugin's bare `pato-asset:` URLs into this scoped form
 //! during validation). This serves those files from the owning plugin's
 //! `assets/` directory and nothing else — path traversal is rejected and an
-//! unknown plugin 404s.
+//! unknown plugin gets the generic not-found image.
+//!
+//! Plugin names are the `.wasm` file stems and are unique (duplicates refuse to
+//! load, see `wasm/plugins.rs`), so `pato-asset://<plugin>/...` is unambiguous.
+//! Any plugin may reference another's assets; they are read-only, so none can
+//! alter another's.
 
 use std::borrow::Cow;
 use std::path::{Component, Path, PathBuf};
@@ -14,6 +19,10 @@ use tauri::{UriSchemeContext, Wry};
 
 use crate::wasm;
 
+/// Shown in place of any asset that is missing or whose plugin isn't loaded.
+/// Served with a 200: browsers don't render the body of a failed `<img>` load.
+const NOT_FOUND_IMAGE: &[u8] = include_bytes!("../assets/not-found.svg");
+
 pub fn handle(_ctx: UriSchemeContext<'_, Wry>, request: Request<Vec<u8>>) -> Response<Cow<'static, [u8]>> {
     match resolve(request.uri()) {
         Ok((bytes, mime)) => Response::builder()
@@ -22,6 +31,12 @@ pub fn handle(_ctx: UriSchemeContext<'_, Wry>, request: Request<Vec<u8>>) -> Res
             .header(http::header::CACHE_CONTROL, "no-cache")
             .body(Cow::Owned(bytes))
             .expect("valid asset response"),
+        Err(StatusCode::NOT_FOUND) => Response::builder()
+            .header(http::header::CONTENT_TYPE, "image/svg+xml")
+            .header(http::header::ACCESS_CONTROL_ALLOW_ORIGIN, "*")
+            .header(http::header::CACHE_CONTROL, "no-cache")
+            .body(Cow::Borrowed(NOT_FOUND_IMAGE))
+            .expect("valid not-found response"),
         Err(status) => Response::builder()
             .status(status)
             .body(Cow::Borrowed(&b""[..]))

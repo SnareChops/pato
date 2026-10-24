@@ -28,16 +28,17 @@ pub const ACTION_DISCONNECT: &str = "disconnect";
 // Also handled in `lib.rs`: it needs the plugin's settings and the modal.
 pub const ACTION_PRIMARY_CHANNEL: &str = "primary-channel";
 
-// `platform:<name>` is resolved by the core to the bundled brand icon, so the
+// The brand icon ships in this plugin's own `assets/` (see `assets.rs`), so the
 // widget identifies its platform at a glance.
-const ICON: &str = "platform:twitch";
+const ICON: &str = "pato-asset:icon.svg";
 
 impl TwitchStatusWidget {
     pub fn new() -> Self {
         let widget = Self(widgets::StatusWidget {
             id: "twitch_status".to_string(),
             icon: ICON.to_string(),
-            label: "Connect".to_string(),
+            label: String::new(),
+            state: widgets::LinkState::Disconnected,
             tooltip: Some("Twitch".to_string()),
             actions: vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")],
         });
@@ -63,6 +64,7 @@ impl TwitchStatusWidget {
     // primary channel, since it can differ from the signed-in account.
     pub fn connected(&mut self, user: &TwitchUser, primary_channel: &str) {
         self.label = user.display_name.clone();
+        self.state = widgets::LinkState::Connected;
         self.icon = ICON.to_string();
         self.tooltip = Some(format!("Twitch - primary channel #{primary_channel}"));
         self.actions = vec![
@@ -76,9 +78,11 @@ impl TwitchStatusWidget {
         self.update();
     }
 
-    // Reset the widget to the disconnected "Connect" state
+    // Reset the widget to the disconnected state; the "Connect" action stays
+    // in the dropdown.
     pub fn disconnected(&mut self) {
-        self.label = "Connect".to_string();
+        self.label = String::new();
+        self.state = widgets::LinkState::Disconnected;
         self.icon = ICON.to_string();
         self.tooltip = Some("Twitch".to_string());
         self.actions = vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")];
@@ -98,7 +102,8 @@ impl TwitchStatusWidget {
         )
         .expect("valid twitch auth url");
         auth::open_auth_window("Connect to Twitch", url.as_str());
-        self.label = "Connecting".to_string();
+        self.label = String::new();
+        self.state = widgets::LinkState::Connecting;
         // Nothing to pick mid-flow.
         self.actions = vec![];
         self.update();

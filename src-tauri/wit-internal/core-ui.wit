@@ -163,10 +163,17 @@ interface widget-view {
     label: string,
     tooltip: option<string>,
   }
+  enum link-state {
+    disconnected,
+    connecting,
+    attention,
+    connected,
+  }
   record status-widget {
     id: string,
     icon: string,
     label: string,
+    state: link-state,
     tooltip: option<string>,
     actions: list<action>,
   }

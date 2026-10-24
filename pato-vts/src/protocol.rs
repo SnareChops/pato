@@ -85,6 +85,15 @@ pub fn hotkeys_in_current_model() -> String {
     request("HotkeysInCurrentModelRequest", json!({}))
 }
 
+pub fn available_models() -> String {
+    request("AvailableModelsRequest", json!({}))
+}
+
+/// An empty id unloads the current model. VTS enforces a 2s global cooldown.
+pub fn model_load(model_id: &str) -> String {
+    request("ModelLoadRequest", json!({ "modelID": model_id }))
+}
+
 pub fn face_found() -> String {
     request("FaceFoundRequest", json!({}))
 }
@@ -139,6 +148,13 @@ mod tests {
         assert_eq!(v["messageType"], "ExpressionActivationRequest");
         assert_eq!(v["data"]["expressionFile"], "a.exp3.json");
         assert_eq!(v["data"]["active"], true);
+    }
+
+    #[test]
+    fn model_load_carries_id() {
+        let v: Value = serde_json::from_str(&model_load("abc")).unwrap();
+        assert_eq!(v["messageType"], "ModelLoadRequest");
+        assert_eq!(v["data"]["modelID"], "abc");
     }
 
     #[test]

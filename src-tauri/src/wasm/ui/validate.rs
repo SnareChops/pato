@@ -202,40 +202,50 @@ fn attribute(
     Ok(kept)
 }
 
-/// Platform brand icons bundled with the webview (`src-ui/assets/platforms/`).
-/// Plugins refer to them as `platform:<name>`.
-const PLATFORMS: &[&str] = &["twitch", "discord", "obs", "vtube-studio", "warudo"];
-
-/// Accepts `https:` URLs unchanged and `pato-asset:` URLs after scoping them to
-/// the owning plugin. Everything else (javascript:, data:, file:, ...) is
-/// dropped.
-fn url(raw: &str, plugin: &str) -> Option<String> {
+/// Accepts `https:` URLs unchanged and `pato-asset:` URLs; everything else
+/// (javascript:, data:, file:, ...) is dropped.
+///
+/// `pato-asset:<path>` (or `pato-asset://<path>` with no further directory
+/// part) names a file in the calling plugin's own `assets/`. The qualified form
+/// `pato-asset://<plugin>/<path>` names a file in another plugin's `assets/`,
+/// e.g. `pato-asset://pato_twitch/icon.svg`. Assets are read-only, so reaching
+/// into another plugin's assets can use them but never change them.
+pub fn url(raw: &str, plugin: &str) -> Option<String> {
     let raw = raw.trim();
-    // `platform:<name>` is a core-owned brand icon (see `PLATFORMS`).
-    if let Some(name) = raw.strip_prefix("platform:") {
-        return PLATFORMS
-            .contains(&name)
-            .then(|| format!("/assets/platforms/{name}.svg"));
-    }
     if let Some(rest) = raw
         .strip_prefix("pato-asset://")
         .or_else(|| raw.strip_prefix("pato-asset:/"))
         .or_else(|| raw.strip_prefix("pato-asset:"))
     {
-        let path = rest.trim_start_matches('/');
-        if path.is_empty()
+        let qualified = raw.starts_with("pato-asset://");
+        let rest = rest.trim_start_matches('/');
+        let (owner, path) = match rest.split_once('/') {
+            Some((owner, path)) if qualified => (owner, path),
+            _ => (plugin, rest),
+        };
+        if !valid_plugin_name(owner)
+            || path.is_empty()
             || path
                 .split('/')
                 .any(|seg| seg == ".." || seg == "." || seg.is_empty())
         {
             return None;
         }
-        return Some(format!("pato-asset://{plugin}/{path}"));
+        return Some(format!("pato-asset://{owner}/{path}"));
     }
     if raw.starts_with("https://") {
         return Some(raw.to_string());
     }
     None
+}
+
+/// Plugin names come from `.wasm` file stems; keep URL hosts to a boring
+/// character set so they can't smuggle ports, userinfo or escapes.
+fn valid_plugin_name(name: &str) -> bool {
+    !name.is_empty()
+        && name
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
 }
 
 #[cfg(test)]
@@ -253,15 +263,6 @@ mod tests {
                 events: vec![],
             }),
         }
-    }
-
-    #[test]
-    fn platform_urls() {
-        assert_eq!(
-            url("platform:twitch", "x").as_deref(),
-            Some("/assets/platforms/twitch.svg")
-        );
-        assert_eq!(url("platform:../etc", "x"), None);
     }
 
     #[test]
@@ -343,6 +344,13 @@ mod tests {
             url("pato-asset://icon.png", "twitch").as_deref(),
             Some("pato-asset://twitch/icon.png")
         );
+        assert_eq!(
+            url("pato-asset://pato_obs/icon.svg", "pato_twitch").as_deref(),
+            Some("pato-asset://pato_obs/icon.svg")
+        );
+        assert_eq!(url("pato-asset://pato_obs/../x", "twitch"), None);
+        assert_eq!(url("pato-asset://bad:host/x.png", "twitch"), None);
+        assert_eq!(url("platform:twitch", "twitch"), None);
         assert_eq!(url("pato-asset:../secret", "twitch"), None);
         assert_eq!(url("javascript:alert(1)", "twitch"), None);
         assert_eq!(
