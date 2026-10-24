@@ -18,9 +18,9 @@ interface widget-dom {
     // text
     p, h1, h2, h3, h4, h5, h6, strong, em, small, code, pre, blockquote,
     // interactive
-    button, input, select, %option, textarea, label, a, img,
+    button, input, select, %option, textarea, label, a, img, form,
     // data
-    table, thead, tbody, tr, th, td, progress, meter, 
+    table, thead, tbody, tr, th, td, progress, meter,
   }
 
   enum input-type {
@@ -28,6 +28,8 @@ interface widget-dom {
     number,
     checkbox,
     radio,
+    switch,
+    password,
   }
 
   // Already validated by the core: `href` / `src` are concrete `https:` or
@@ -47,6 +49,9 @@ interface widget-dom {
     min(f64),
     max(f64),
     step(f64),
+    required(bool),
+    max-length(u32),
+    submits(bool),
   }
 
   // --- constrained style vocabulary --------------------------------------
@@ -102,7 +107,7 @@ interface widget-dom {
   // --- events -----------------------------------------------------------
 
   enum event-kind {
-    click, input, change, submit, focus, blur, enter-key,
+    click, input, change, submit, focus, blur, enter-key, context-menu,
   }
   // `handler` is the plugin's opaque id for this subscription; the webview
   // echoes it back (as part of the interaction) so the core can route.
@@ -197,6 +202,46 @@ interface widget-view {
   remove: func(widget-id: string) -> bool;
 }
 
+// Modal dialogs the webview renders in a native <dialog> (top layer, inert
+// background). The chrome - plugin label, title, close button - is drawn by the
+// webview from these fields; only `custom.nodes` is plugin-authored content.
+interface modal-view {
+  use widget-dom.{node};
+
+  enum modal-size {
+    sm, md, lg,
+  }
+  enum confirm-tone {
+    normal, danger,
+  }
+  record custom-modal {
+    // pid-scoped id ("<plugin>|<local>")
+    id: string,
+    // Display label of the owning plugin, derived by the core (never
+    // plugin-supplied), shown in the title bar.
+    plugin: string,
+    title: string,
+    size: modal-size,
+    nodes: list<node>,
+  }
+  record confirm-modal {
+    id: string,
+    plugin: string,
+    title: string,
+    message: string,
+    confirm-label: string,
+    tone: confirm-tone,
+  }
+  variant modal {
+    custom(custom-modal),
+    confirm(confirm-modal),
+  }
+  // Show a modal, or update it in place if the id is already open.
+  open: func(modal: modal) -> bool;
+  // Close a modal without reporting a dismissal back to the core.
+  close: func(id: string) -> bool;
+}
+
 // Signals the webview raises back to the core (user interactions). The core
 // routes these to the owning plugin by pid and forwards them as
 // pato:plugin/widget-events.
@@ -230,15 +275,22 @@ interface ui-signals {
   // User resized a widget on the grid. The core clamps to the spec's
   // min / max, persists the layout, and forwards to the plugin's on-layout.
   widget-resized: func(widget-id: string, tiles: tile-size);
+
+  // The user closed a custom modal (close button / Esc / backdrop).
+  modal-dismissed: func(id: string);
+  // The user answered a confirm prompt; any dismissal is `confirmed: false`.
+  confirm-answered: func(id: string, confirmed: bool);
 }
 
 world webview {
   import widget-dom;
   export widget-view;
+  export modal-view;
   import ui-signals;
 }
 world core-ui {
   import widget-dom;
   import widget-view;
+  import modal-view;
   export ui-signals;
 }

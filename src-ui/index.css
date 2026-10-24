@@ -224,6 +224,10 @@ button-widget {
   }
 }
 
+pato-status-widgets {
+  display: flex;
+  gap: 5px;
+}
 status-widget {
   display:inline-flex;
   /* align-items: center; */
@@ -242,6 +246,13 @@ status-widget {
     max-height: 40px;
     max-width: 40px;
   }
+}
+status-widget img.platform-icon {
+  border-radius: 0;
+  height: 18px;
+  width: 18px;
+  align-self: center;
+  margin-right: 6px;
 }
 /* Only a widget with actions to pick from invites a click. */
 status-widget.has-actions {
@@ -332,4 +343,134 @@ status-widget.has-actions {
 }
 .system-menu button:hover {
   background: var(--pato-color-bg);
+}
+
+/* --- Modals -------------------------------------------------------------
+ * Native <dialog>s built by src-ui/lib/modals.ts. Opened with showModal(), so
+ * they sit in the top layer above everything (no z-index involved) and the
+ * page behind is inert. Plugins never style any of this - only the body node
+ * table inside .pato-modal-body is theirs. */
+dialog.pato-modal {
+  padding: 0;
+  border: 1px solid var(--pato-color-border);
+  border-radius: var(--pato-radius-xl);
+  background: var(--pato-color-bg-raised);
+  color: var(--pato-color-fg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: var(--pato-text-md);
+  width: min(92vw, 520px);
+  max-height: 88vh;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+dialog.pato-modal[open] {
+  display: flex;
+}
+dialog.pato-modal.pato-modal-sm {
+  width: min(92vw, 380px);
+}
+dialog.pato-modal.pato-modal-lg {
+  width: min(94vw, 760px);
+}
+dialog.pato-modal::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+.pato-modal-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 0;
+}
+.pato-modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--pato-space-md);
+  padding: var(--pato-space-md) var(--pato-space-lg);
+  border-bottom: 1px solid var(--pato-color-border);
+}
+.pato-modal-plugin {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--pato-color-bg);
+  border: 1px solid var(--pato-color-border);
+  color: var(--pato-color-fg-muted);
+  font-size: var(--pato-text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.pato-modal-title {
+  flex: 1;
+  margin: 0;
+  font-size: var(--pato-text-lg);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pato-modal-close {
+  all: unset;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--pato-radius-md);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--pato-color-fg-muted);
+  cursor: pointer;
+}
+.pato-modal-close:hover {
+  background: var(--pato-color-bg);
+  color: var(--pato-color-fg);
+}
+.pato-modal-close:focus-visible,
+.pato-modal-btn:focus-visible {
+  outline: 2px solid var(--pato-color-primary);
+  outline-offset: 2px;
+}
+.pato-modal-body {
+  padding: var(--pato-space-lg);
+  overflow: auto;
+  min-height: 0;
+}
+.pato-modal-message {
+  margin: 0 0 var(--pato-space-lg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pato-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--pato-space-md);
+}
+.pato-modal-btn {
+  font: inherit;
+  cursor: pointer;
+  padding: var(--pato-space-sm) var(--pato-space-lg);
+  border-radius: var(--pato-radius-md);
+  border: 1px solid var(--pato-color-border);
+  background: var(--pato-color-bg);
+  color: var(--pato-color-fg);
+}
+.pato-modal-btn:hover {
+  border-color: var(--pato-color-fg-muted);
+}
+.pato-modal-btn.primary,
+.pato-modal-btn.danger {
+  color: #fff;
+  border-color: transparent;
+}
+.pato-modal-btn.primary {
+  background: var(--pato-color-primary);
+}
+.pato-modal-btn.danger {
+  background: var(--pato-color-danger);
+}
+.pato-modal-btn.primary:hover,
+.pato-modal-btn.danger:hover {
+  filter: brightness(1.1);
 }

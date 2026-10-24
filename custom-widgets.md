@@ -210,7 +210,7 @@ real plugins prove they need it.
 ### Events — whitelisted kinds, typed minimal payloads
 
 ```wit
-enum event-kind { click, input, change, submit, focus, blur, enter-key }
+enum event-kind { click, input, change, submit, focus, blur, enter-key, context-menu }
 record binding { kind: event-kind, handler: string }
 
 // on the element:
@@ -221,7 +221,7 @@ The core constructs the payload from a whitelist — never the raw DOM event:
 
 ```wit
 variant payload {
-  none,                                  // click, focus, blur, enter-key
+  none,                                  // click, focus, blur, enter-key, context-menu
   text(string),                          // input/change on text/number
   toggled(bool),                         // change on checkbox/radio
   fields(list<tuple<string, string>>),   // submit — only named fields
@@ -365,9 +365,8 @@ Notes on what the WIT forced vs. the sketch above:
 - **`pato-asset://` scheme** — `src-tauri/src/assets.rs`, registered on the
   Tauri builder. Serves `plugins/<dir>/assets/<path>` for the owning plugin
   only; path traversal rejected. Plugin roots tracked in `wasm.rs`'s broker.
-- **Plugin** — `pato-twitch` updated for the new `widget-events`; a demo
-  custom widget in `pato-twitch/src/widgets/panel.rs` (styled column, heading,
-  `value-slot` user name, Refresh button whose click round-trips).
+- **Plugin** — `pato-twitch` updated for the new `widget-events` (the demo
+  panel widget used to exercise this has since been removed).
 
 Build-verified: `cargo build` + `cargo test` (src-tauri), `cargo build
 --target wasm32-wasip2` (pato-twitch), `tsc` + `esbuild` (src-ui),
@@ -388,6 +387,33 @@ Build-verified: `cargo build` + `cargo test` (src-tauri), `cargo build
   regressing a working feature.
 - **`grid` layout** in the style vocab, **pixel-dimension read-back**,
   **rate-limiting** of high-frequency events.
+
+## Modals and confirm prompts
+
+Widgets are size-limited, so large forms open in a **modal**: a core-owned
+dialog whose body is the same validated node table a widget uses.
+
+- **Plugin API** (`pato:plugin/modals`): `open(modal)` (re-calling with an open
+  id updates it in place), `close(id)`, and `confirm(prompt)`. Interactions come
+  back on `on-event` with the modal id as `widget-id`; `on-modal-closed(id)`
+  fires when the user dismisses one, `on-confirm(id, confirmed)` answers a
+  prompt.
+- **Host-drawn chrome.** Backdrop, title bar, close button, Esc, focus trap and
+  the plugin-name badge are built by the webview from plain strings
+  (`src-ui/lib/modals.ts`) in a native `<dialog>` opened with `showModal()`
+  (top layer, inert page). The badge label is derived by the core from the
+  plugin's name, never supplied by the plugin.
+- **Confirm** is a pre-made prompt with no body tree: title, message, confirm
+  label, `normal | danger` tone. `danger` focuses Cancel by default.
+- **Limits** (`wasm/ui/modal.rs`): max 2 open per plugin, title <= 80 chars,
+  message <= 1000, label <= 30; ids are pid-namespaced.
+- **Forms**: `form` tag, `input-type::switch`, and `required` / `max-length` /
+  `submits` attrs. The webview always cancels native form submission and
+  delivers named fields as `payload.fields` (checkboxes/switches as
+  "true"/"false"). Buttons only submit when `submits` is set.
+- **Not gated on user gestures yet.** Requiring `open` to follow a user
+  interaction (anti-phishing) was considered and deferred until proper
+  limitations are worked out.
 
 ## Open questions
 

@@ -1,0 +1,42 @@
+package pato:pato-obs@0.1.0;
+
+// Public API other plugins (1st- or 3rd-party) import to interact with
+// pato-obs's OBS connection. src-tauri brokers every call across the plugin
+// boundary (see src-tauri/wit-broker and src-tauri/src/wasm/obs_broker.rs) -
+// from an importing plugin's own perspective this is a normal WIT import,
+// fetched like any other dependency (see that plugin's wkg.toml).
+//
+// See PROTOCOL.md for the obs-websocket protocol this wraps.
+interface scenes {
+  record scene {
+    name: string,
+    uuid: string,
+  }
+  record scene-item {
+    id: u32,
+    source-name: string,
+    enabled: bool,
+  }
+
+  // Read pato-obs's in-memory mirror - instant, no OBS round-trip. Empty /
+  // none until pato-obs has connected and completed its initial sync, and
+  // always reflects the *last known* state (kept live from OBS's own event
+  // stream, not just calls made through this API - see PROTOCOL.md).
+  list-scenes: func() -> list<scene>;
+  current-program-scene: func() -> option<scene>;
+  list-scene-items: func(scene: string) -> list<scene-item>;
+
+  // Send a request to OBS. `false` means pato-obs isn't currently connected
+  // and nothing was sent; `true` only means the request was sent, not that
+  // OBS accepted it. obs-websocket's reply is asynchronous and there is no
+  // event channel back to a calling plugin yet (deferred - see
+  // PROTOCOL.md's "Known limitations"): re-read `list-scenes` /
+  // `list-scene-items` afterward, which the mirror updates once OBS's own
+  // event for the change arrives.
+  create-scene: func(name: string) -> bool;
+  remove-scene: func(name: string) -> bool;
+  set-current-scene: func(name: string) -> bool;
+  create-scene-item: func(scene: string, source: string) -> bool;
+  remove-scene-item: func(scene: string, item-id: u32) -> bool;
+  set-scene-item-enabled: func(scene: string, item-id: u32, enabled: bool) -> bool;
+}

@@ -33,8 +33,31 @@ export const WIDGET_BASE_CSS = `
     border: 1px solid var(--pato-color-border); border-radius: var(--pato-radius-sm);
     padding: var(--pato-space-xs) var(--pato-space-sm);
   }
+  input.pato-switch {
+    appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0;
+    width: 32px; height: 18px; margin: 0; padding: 0; cursor: pointer;
+    border: none; border-radius: 9px; background: var(--pato-color-border);
+    transition: background 0.15s ease;
+  }
+  input.pato-switch::after {
+    content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--pato-color-bg); transition: transform 0.15s ease;
+  }
+  input.pato-switch:checked { background: var(--pato-color-success); }
+  input.pato-switch:checked::after { transform: translateX(14px); }
+  input.pato-switch:disabled { opacity: 0.5; cursor: default; }
+  input.pato-switch:focus-visible { outline: 2px solid var(--pato-color-primary); outline-offset: 2px; }
+  input:focus-visible, textarea:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--pato-color-primary); outline-offset: 1px;
+  }
   a { color: var(--pato-color-primary); }
   img { max-width: 100%; }
+  /* Inside a modal the widget sizes to its content; the dialog body scrolls. */
+  :host([modal]) {
+    height: auto; overflow: visible; contain: none; border: none;
+    border-radius: 0; background: transparent;
+  }
+  :host([modal]) .pato-root { height: auto; overflow: visible; padding: 0; }
   .pato-resize {
     position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
     cursor: nwse-resize; touch-action: none;

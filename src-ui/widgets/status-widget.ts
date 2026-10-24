@@ -21,8 +21,11 @@ export class StatusWidget extends Component {
   #actions: StatusWidgetAction[] = [];
   #open = false;
 
+  // `platform:<name>` selects a bundled brand icon; anything else is a URL.
   set icon(value: string) {
-    this.#icon.attr({ src: value ?? "" });
+    const platform = value?.startsWith("platform:") ? value.slice("platform:".length) : null;
+    this.#icon.attr({ src: platform ? `/assets/platforms/${platform}.svg` : (value ?? "") });
+    this.#icon.class(platform ? "platform-icon" : "");
   }
   set label(value: string) {
     this.#label.clear();

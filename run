@@ -13,11 +13,41 @@ wkg fetch
 cargo build --release --target wasm32-wasip2 
 cd ..
 
+# Build pato-obs plugin
+cd pato-obs
+wkg fetch
+cargo build --release --target wasm32-wasip2 
+cd ..
+
+# Build pato-commands plugin
+cd pato-commands
+wkg fetch
+cargo build --release --target wasm32-wasip2 
+cd ..
+
+# Build pato-vts plugin
+cd pato-vts
+wkg fetch
+cargo build --release --target wasm32-wasip2 
+cd ..
+
 # Copy plugins
 mkdir -p src-tauri/plugins/pato_discord_0_1_0
 mkdir -p src-tauri/plugins/pato_twitch_0_1_0
+mkdir -p src-tauri/plugins/pato_obs_0_1_0
+mkdir -p src-tauri/plugins/pato_commands_0_1_0
+mkdir -p src-tauri/plugins/pato_vts_0_1_0
 cp pato-discord/target/wasm32-wasip2/release/pato_discord.wasm src-tauri/plugins/pato_discord_0_1_0/pato_discord.wasm
 cp pato-twitch/target/wasm32-wasip2/release/pato_twitch.wasm src-tauri/plugins/pato_twitch_0_1_0/pato_twitch.wasm
+cp pato-obs/target/wasm32-wasip2/release/pato_obs.wasm src-tauri/plugins/pato_obs_0_1_0/pato_obs.wasm
+cp pato-commands/target/wasm32-wasip2/release/pato_commands.wasm src-tauri/plugins/pato_commands_0_1_0/pato_commands.wasm
+cp pato-vts/target/wasm32-wasip2/release/pato_vts.wasm src-tauri/plugins/pato_vts_0_1_0/pato_vts.wasm
+
+# Fetch 1st-party plugins' public APIs (e.g. pato-obs's `pato:pato-obs/scenes`)
+# for the host-side broker - see src-tauri/src/wasm/obs_broker.rs.
+cd src-tauri
+wkg fetch wit-broker
+cd ..
 
 # Build UI
 #

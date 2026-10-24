@@ -4,6 +4,7 @@ import { callRust } from "./lib/bindings.js";
 import "./lib/db.js";
 import "./lib/storage.js";
 import "./lib/widgets.js";
+import "./lib/modals.js";
 import "./lib/log.js";
 
 export async function init() {

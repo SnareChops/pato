@@ -16,8 +16,9 @@ mod plugin {
         exports: { default: async },
     });
 }
-use plugin::pato::plugin::widgets;
+use plugin::pato::plugin::{modals, widgets};
 
+pub mod modal;
 pub mod validate;
 pub mod view;
 
@@ -208,5 +209,8 @@ pub async fn status_widget_action(id: String, action: String) -> Result<(), Stri
 
 pub fn init() -> Result<(), String> {
     println!("Initializing UI module...");
-    wasm::link(|linker| widgets::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
+    wasm::link(|linker| {
+        widgets::add_to_linker::<_, HasSelf<_>>(linker, |host| host)?;
+        modals::add_to_linker::<_, HasSelf<_>>(linker, |host| host)
+    })
 }

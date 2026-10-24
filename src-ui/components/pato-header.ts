@@ -13,6 +13,11 @@ class PatoHeader extends Component {
       padding: "12px 20px",
       height: "60px",
       boxSizing: "border-box",
+      // Stays put while the dashboard scrolls. Above the widget cells (which
+      // use z-index up to 3) and the menus that open from the header.
+      position: "sticky",
+      top: "0",
+      zIndex: "10",
     });
   }
 }

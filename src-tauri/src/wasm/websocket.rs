@@ -1,4 +1,4 @@
-//! Generic, vendor-agnostic secure WebSocket relay for plugins.
+//! Generic, vendor-agnostic WebSocket relay for plugins.
 //!
 //! The core owns the real socket - same trust-boundary role as
 //! `wasi:http`'s outgoing-handler for plain HTTP requests - but knows
@@ -8,6 +8,10 @@
 //! directions. Protocol semantics (handshake sequence, framing, parsing)
 //! are entirely the calling plugin's responsibility - see `pato-twitch`'s
 //! own Twitch IRC client for an example.
+//!
+//! `wss://` is required except for `ws://` to a loopback host (see
+//! `is_permitted`) - the one carve-out for local control-plane protocols
+//! (e.g. obs-websocket) that have no TLS story of their own.
 
 use std::sync::LazyLock;
 
@@ -40,10 +44,34 @@ struct Connection {
 
 static CONNECTIONS: LazyLock<DashMap<String, Connection>> = LazyLock::new(DashMap::new);
 
+/// obs-websocket (and anything else that only ever runs as a same-machine
+/// control plane) has no TLS story of its own - it's plain `ws://` or
+/// nothing. Plaintext is only acceptable when it can't leave the machine, so
+/// `ws://` is allowed exclusively to a loopback host; everything else still
+/// requires `wss://`. Resolving `localhost` isn't attempted - only the
+/// literal loopback forms are accepted, so a plugin can't launder a remote
+/// `ws://` connection through a hosts-file trick.
+fn is_permitted(url: &str) -> bool {
+    if url.starts_with("wss://") {
+        return true;
+    }
+    let Some(parsed) = url::Url::parse(url).ok().filter(|u| u.scheme() == "ws") else {
+        return false;
+    };
+    match parsed.host() {
+        Some(url::Host::Domain(h)) => h.eq_ignore_ascii_case("localhost"),
+        Some(url::Host::Ipv4(ip)) => ip.is_loopback(),
+        Some(url::Host::Ipv6(ip)) => ip.is_loopback(),
+        None => false,
+    }
+}
+
 impl websocket::Host for wasm::HostData {
     async fn connect(&mut self, url: String) -> Result<String, String> {
-        if !url.starts_with("wss://") {
-            return Err("only wss:// URLs are permitted".to_string());
+        if !is_permitted(&url) {
+            return Err(
+                "only wss:// URLs, or ws:// to localhost/127.0.0.1/::1, are permitted".to_string(),
+            );
         }
         let (ws, _) = tokio_tungstenite::connect_async(&url)
             .await
@@ -144,4 +172,33 @@ async fn dispatch(pid: &str, func: &str, params: Vec<Val>) {
 pub fn init() -> Result<(), String> {
     println!("Initializing Websocket module...");
     wasm::link(|linker| websocket::add_to_linker::<_, HasSelf<_>>(linker, |host| host))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn wss_always_permitted() {
+        assert!(is_permitted("wss://irc-ws.chat.twitch.tv:443"));
+        assert!(is_permitted("wss://example.com"));
+    }
+
+    #[test]
+    fn ws_permitted_only_to_loopback() {
+        assert!(is_permitted("ws://127.0.0.1:4455"));
+        assert!(is_permitted("ws://localhost:4455"));
+        assert!(is_permitted("ws://LOCALHOST:4455"));
+        assert!(is_permitted("ws://[::1]:4455"));
+        assert!(!is_permitted("ws://192.168.1.50:4455"));
+        assert!(!is_permitted("ws://example.com"));
+        assert!(!is_permitted("ws://127.0.0.1.evil.com"));
+    }
+
+    #[test]
+    fn rejects_other_schemes_and_garbage() {
+        assert!(!is_permitted("http://127.0.0.1"));
+        assert!(!is_permitted("not a url"));
+        assert!(!is_permitted(""));
+    }
 }

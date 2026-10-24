@@ -7,9 +7,19 @@ pato-discord/wit/deps/
 pato-twitch/target/
 pato-twitch/wit/deps/
 
+pato-obs/target/
+pato-obs/wit/deps/
+
+pato-commands/target/
+pato-commands/wit/deps/
+
+pato-vts/target/
+pato-vts/wit/deps/
+
 src-tauri/gen/
 src-tauri/target/
 src-tauri/plugins/
+src-tauri/wit-broker/deps/
 *.drawio.bkp
 /src-ui/index.js
 /src-ui/index.js.map

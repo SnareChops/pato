@@ -12,10 +12,11 @@ const EVENT_TYPE: Record<EventKind, string> = {
   focus: "focus",
   blur: "blur",
   "enter-key": "keydown",
+  "context-menu": "contextmenu",
 };
 
 /** Allowed attribute names */
-const MANAGED_ATTRS = ["href", "src", "alt", "title", "name", "placeholder", "rows", "min", "max", "step", "type"];
+const MANAGED_ATTRS = ["href", "src", "alt", "title", "name", "placeholder", "rows", "min", "max", "step", "type", "maxlength"];
 
 /** Pato listeners attached to a DOM node, so they can be torn off on re-render. */
 const listeners = new WeakMap<Element, Array<[string, EventListener]>>();
@@ -30,9 +31,37 @@ function isNearBottom(el: HTMLElement): boolean {
   return el.scrollHeight - el.scrollTop - el.clientHeight <= STICK_TO_BOTTOM_PX;
 }
 
-type Payload = { tag: "none" } | { tag: "text"; val: string } | { tag: "toggled"; val: boolean };
+type Payload =
+  | { tag: "none" }
+  | { tag: "text"; val: string }
+  | { tag: "toggled"; val: boolean }
+  | { tag: "fields"; val: [string, string][] };
+
+/** Forms whose native submission (page navigation) has already been cancelled. */
+const guardedForms = new WeakSet<HTMLFormElement>();
+
+/**
+ * The named fields of a form, read by the webview - the plugin never sees
+ * anything that wasn't a control it declared with a `name`. Checkboxes and
+ * switches report "true"/"false" (FormData would omit the unchecked ones).
+ */
+function formFields(form: HTMLFormElement): [string, string][] {
+  const out: [string, string][] = [];
+  for (const el of Array.from(form.elements)) {
+    if (!(el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement || el instanceof HTMLSelectElement)) continue;
+    if (!el.name) continue;
+    if (el instanceof HTMLInputElement && el.type === "checkbox") out.push([el.name, String(el.checked)]);
+    else if (el instanceof HTMLInputElement && el.type === "radio") {
+      if (el.checked) out.push([el.name, el.value]);
+    } else out.push([el.name, el.value]);
+  }
+  return out;
+}
 
 function extractPayload(kind: EventKind, dom: Element): Payload {
+  if (kind === "submit" && dom instanceof HTMLFormElement) {
+    return { tag: "fields", val: formFields(dom) };
+  }
   if (kind === "input" || kind === "change") {
     if (dom instanceof HTMLInputElement && (dom.type === "checkbox" || dom.type === "radio")) {
       return { tag: "toggled", val: dom.checked };
@@ -169,6 +198,9 @@ export class PatoCustomWidget extends Component {
   #applyAttrs(dom: HTMLElement, el: WElement) {
     const attrs = new Set<string>();
     let hasDisabled = false;
+    let hasRequired = false;
+    let submits = false;
+    let isSwitch = false;
 
     for (const a of el.attrs) {
       switch (a.tag) {
@@ -203,7 +235,19 @@ export class PatoCustomWidget extends Component {
           dom.setAttribute("step", String(a.val)), attrs.add("step");
           break;
         case "kind":
-          dom.setAttribute("type", a.val), attrs.add("type");
+          // A switch is a checkbox that reads as an on/off toggle.
+          isSwitch = a.val === "switch";
+          dom.setAttribute("type", isSwitch ? "checkbox" : a.val), attrs.add("type");
+          break;
+        case "max-length":
+          dom.setAttribute("maxlength", String(a.val)), attrs.add("maxlength");
+          break;
+        case "required":
+          (dom as HTMLInputElement).required = a.val;
+          hasRequired = true;
+          break;
+        case "submits":
+          submits = a.val;
           break;
         case "value":
           // `value`/`checked` are set only when the plugin sends them, so an
@@ -224,9 +268,28 @@ export class PatoCustomWidget extends Component {
       if (!attrs.has(name) && dom.hasAttribute(name)) dom.removeAttribute(name);
     }
     if (!hasDisabled && "disabled" in dom) (dom as HTMLInputElement).disabled = false;
+    if (!hasRequired && "required" in dom) (dom as HTMLInputElement).required = false;
+
+    if (isSwitch) {
+      dom.setAttribute("role", "switch");
+      dom.classList.add("pato-switch");
+    } else {
+      dom.removeAttribute("role");
+      dom.classList.remove("pato-switch");
+    }
+    // A button only ever submits its form when the plugin says so; the HTML
+    // default (submit) would turn a "Cancel" button into a submit button.
+    if (dom instanceof HTMLButtonElement) dom.type = submits ? "submit" : "button";
   }
 
   #applyEvents(dom: HTMLElement, el: WElement) {
+    // A form must never navigate the webview, whether or not the plugin binds
+    // `submit`. Registered before any binding so it always runs first.
+    if (dom instanceof HTMLFormElement && !guardedForms.has(dom)) {
+      dom.addEventListener("submit", (ev) => ev.preventDefault());
+      guardedForms.add(dom);
+    }
+
     for (const [type, fn] of listeners.get(dom) ?? []) dom.removeEventListener(type, fn);
 
     const added: Array<[string, EventListener]> = [];
@@ -234,6 +297,8 @@ export class PatoCustomWidget extends Component {
       const type = EVENT_TYPE[binding.kind];
       const fn: EventListener = (ev) => {
         if (binding.kind === "enter-key" && (ev as KeyboardEvent).key !== "Enter") return;
+        // The browser's own menu would sit on top of whatever the plugin shows.
+        if (binding.kind === "context-menu") ev.preventDefault();
         void callRust("custom_widget_event", {
           widgetId: this.widgetId,
           // The firing *binding's* handler, not the element's own `key` -

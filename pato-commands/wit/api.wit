@@ -1,0 +1,81 @@
+package pato:pato-commands@0.1.0;
+
+// Public API of pato-commands. src-tauri brokers every call across the plugin
+// boundary (see src-tauri/wit-broker and src-tauri/src/wasm/commands_broker.rs).
+interface platform {
+  // A chatter's standing, lowest to highest. Platform plugins map their own
+  // notion of roles/badges onto this ladder; a user with several roles
+  // reports the highest.
+  enum role {
+    everyone,
+    subscriber,
+    vip,
+    moderator,
+    broadcaster,
+  }
+
+  record chat-message {
+    // Which platform it came from ("twitch", "discord", ...). Selects the
+    // command prefix and which plugin replies are sent through.
+    platform: string,
+    // Platform's stable user id; may be empty (e.g. the streamer's own
+    // typed messages on Twitch). `username` is always present, so use it,
+    // not this, to key per-user state.
+    user-id: string,
+    // Lowercase login/handle.
+    username: string,
+    display-name: string,
+    role: role,
+    text: string,
+  }
+
+  // Offer a chat line to the command system.
+  //
+  // Contract for platform plugins: only offer lines a human wrote (received
+  // from the platform, or typed by the streamer). NEVER offer a message that
+  // was sent through the plugin's own send API (e.g. pato-twitch's
+  // `chat.send-message`) - those are command replies, and a reply that
+  // contains a command must not trigger it.
+  // Fire-and-forget: the host does
+  // not wait for pato-commands to process it (which may reply through the
+  // platform plugin's own API, so waiting could deadlock). Silently dropped
+  // if pato-commands isn't installed.
+  ingest: func(message: chat-message);
+}
+
+// What a plugin that owns trigger commands exports. When a chat line invokes
+// one of its commands, pato-commands (via the host, see `signals`) calls this
+// on the owning plugin. Fire-and-forget: the owner can't reply through it.
+interface command-events {
+  use platform.{role};
+
+  variant arg-value {
+    text(string),
+    num(f64),
+    flag(bool),
+  }
+
+  record invocation {
+    // Canonical command name, never the alias that was typed.
+    command: string,
+    platform: string,
+    user-id: string,
+    username: string,
+    display-name: string,
+    role: role,
+    // Parsed arguments, in template order. Omitted optional arguments are
+    // absent. Names and types come from the command's argument template.
+    args: list<tuple<string, arg-value>>,
+  }
+
+  on-command: func(invocation: invocation);
+}
+
+// Imported by pato-commands only: delivers an invocation to the plugin that
+// owns the command. Host-brokered and fire-and-forget (see `platform.ingest`
+// for why waiting would risk deadlock).
+interface signals {
+  use command-events.{invocation};
+
+  emit: func(owner: string, invocation: invocation);
+}

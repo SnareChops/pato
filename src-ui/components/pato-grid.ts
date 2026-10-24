@@ -26,12 +26,26 @@ function clampTiles(t: TileSize, min: TileSize, max: TileSize): TileSize {
   };
 }
 
-function loadSize(id: string): TileSize | undefined {
+// Saved layout lives in localStorage keyed by widget id, and outlives the
+// widgets themselves: plugins get updated, and widgets get added, removed or
+// resized between runs. So nothing read back can be trusted - entries for
+// widgets that no longer exist are simply never read (and are kept, so a
+// widget that returns finds its old spot), and entries for ones that do
+// exist are shape-checked here and collision-checked where they are applied.
+function readJson(key: string): unknown {
   try {
-    const raw = localStorage.getItem(`pato:widget-size:${id}`);
-    if (raw) return JSON.parse(raw) as TileSize;
-  } catch {}
-  return undefined;
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+function isCount(n: unknown): n is number {
+  return typeof n === "number" && Number.isInteger(n) && n >= 1 && n <= GRID_COLS * 100;
+}
+function loadSize(id: string): TileSize | undefined {
+  const v = readJson(`pato:widget-size:${id}`) as Partial<TileSize> | null | undefined;
+  return v && isCount(v.w) && isCount(v.h) ? { w: v.w, h: v.h } : undefined;
 }
 function saveSize(id: string, size: TileSize) {
   try {
@@ -40,11 +54,8 @@ function saveSize(id: string, size: TileSize) {
 }
 
 function loadPos(id: string): GridPos | undefined {
-  try {
-    const raw = localStorage.getItem(`pato:widget-pos:${id}`);
-    if (raw) return JSON.parse(raw) as GridPos;
-  } catch {}
-  return undefined;
+  const v = readJson(`pato:widget-pos:${id}`) as Partial<GridPos> | null | undefined;
+  return v && isCount(v.x) && isCount(v.y) ? { x: v.x, y: v.y } : undefined;
 }
 function savePos(id: string, pos: GridPos) {
   try {
@@ -175,8 +186,7 @@ export class PatoGrid extends Component {
     cell.min = min;
     cell.max = max;
     const size = clampTiles(loadSize(spec.id) ?? spec.size, min, max);
-    const pos = loadPos(spec.id) ?? this.#firstFit(size, spec.id);
-    this.#place(spec.id, pos, size, false);
+    this.#place(spec.id, this.#restorePos(spec.id, size), size, false);
     this.#setResizeHandle(cell);
     this.#reportLayout(spec.id, size);
     this.#syncFillers();
@@ -217,11 +227,24 @@ export class PatoGrid extends Component {
     const size = { w: 4, h: 4 };
     cell = { el, widget, pos: { x: 1, y: 1 }, size, min: { w: 1, h: 1 }, max: { w: GRID_COLS, h: GRID_COLS } };
     this.#cells.set(id, cell);
-    cell.pos = loadPos(id) ?? this.#firstFit(size, id);
+    cell.pos = this.#restorePos(id, size);
     this.#place(id, cell.pos, cell.size, false);
     this.#setDragHandle(cell);
     this.#syncFillers();
     return cell;
+  }
+
+  /**
+   * Where a widget goes: its saved position if that still fits (inside the
+   * columns and clear of every other widget - which stops holding when the
+   * layout around it changed, e.g. a neighbour was removed and something else
+   * took its place, or a plugin update resized a widget), otherwise the first
+   * empty spot.
+   */
+  #restorePos(id: string, size: TileSize): GridPos {
+    const saved = loadPos(id);
+    if (saved && saved.x + size.w - 1 <= GRID_COLS && !this.#collides(id, saved, size)) return saved;
+    return this.#firstFit(size, id);
   }
 
   /** First empty spot (row-major scan) a `size` footprint fits in, ignoring `excludeId`. */

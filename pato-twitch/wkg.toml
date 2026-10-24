@@ -1,2 +1,3 @@
 [overrides]
 "pato:plugin" = { path = "../src-tauri/wit/plugin.wit" }
+"pato:pato-commands" = { path = "../pato-commands/wit/api.wit" }

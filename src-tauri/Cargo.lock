@@ -2819,6 +2819,7 @@ dependencies = [
  "tauri-build",
  "tokio",
  "tokio-tungstenite",
+ "url",
  "uuid",
  "walkdir",
  "wasmtime",

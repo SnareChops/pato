@@ -18,16 +18,18 @@ const MAX_STR: usize = 64 * 1024;
 const MAX_DEPTH: usize = 32;
 /// Hard ceiling on event bindings per element.
 const MAX_EVENTS: usize = 16;
+/// Hard ceiling on a text control's `max-length`.
+const MAX_INPUT_LEN: u32 = 10_000;
 
 /// Validate and normalise a flat node table. `plugin` is the owning plugin's
 /// name, used to scope `pato-asset:` URLs.
 pub fn tree(nodes: Vec<dom::Node>, plugin: &str) -> Result<Vec<view::Node>, String> {
     if nodes.is_empty() {
-        return Err("custom widget has no nodes".into());
+        return Err("tree has no nodes".into());
     }
     if nodes.len() > MAX_NODES {
         return Err(format!(
-            "custom widget has {} nodes (max {MAX_NODES})",
+            "tree has {} nodes (max {MAX_NODES})",
             nodes.len()
         ));
     }
@@ -65,7 +67,7 @@ pub fn tree(nodes: Vec<dom::Node>, plugin: &str) -> Result<Vec<view::Node>, Stri
         let p = nodes[i].parent.unwrap() as usize;
         depth[i] = depth[p] + 1;
         if depth[i] > MAX_DEPTH {
-            return Err(format!("custom widget tree exceeds depth {MAX_DEPTH}"));
+            return Err(format!("tree exceeds depth {MAX_DEPTH}"));
         }
     }
 
@@ -190,15 +192,31 @@ fn attribute(
         dom::Attr::Min(v) => matches!(tag, Input | Progress | Meter).then_some(view::Attr::Min(v)),
         dom::Attr::Max(v) => matches!(tag, Input | Progress | Meter).then_some(view::Attr::Max(v)),
         dom::Attr::Step(v) => (tag == Input).then_some(view::Attr::Step(v)),
+        dom::Attr::Required(b) => {
+            matches!(tag, Input | Select | Textarea).then_some(view::Attr::Required(b))
+        }
+        dom::Attr::MaxLength(n) => matches!(tag, Input | Textarea)
+            .then_some(view::Attr::MaxLength(n.min(MAX_INPUT_LEN))),
+        dom::Attr::Submits(b) => (tag == Button).then_some(view::Attr::Submits(b)),
     };
     Ok(kept)
 }
+
+/// Platform brand icons bundled with the webview (`src-ui/assets/platforms/`).
+/// Plugins refer to them as `platform:<name>`.
+const PLATFORMS: &[&str] = &["twitch", "discord", "obs", "vtube-studio", "warudo"];
 
 /// Accepts `https:` URLs unchanged and `pato-asset:` URLs after scoping them to
 /// the owning plugin. Everything else (javascript:, data:, file:, ...) is
 /// dropped.
 fn url(raw: &str, plugin: &str) -> Option<String> {
     let raw = raw.trim();
+    // `platform:<name>` is a core-owned brand icon (see `PLATFORMS`).
+    if let Some(name) = raw.strip_prefix("platform:") {
+        return PLATFORMS
+            .contains(&name)
+            .then(|| format!("/assets/platforms/{name}.svg"));
+    }
     if let Some(rest) = raw
         .strip_prefix("pato-asset://")
         .or_else(|| raw.strip_prefix("pato-asset:/"))
@@ -238,6 +256,15 @@ mod tests {
     }
 
     #[test]
+    fn platform_urls() {
+        assert_eq!(
+            url("platform:twitch", "x").as_deref(),
+            Some("/assets/platforms/twitch.svg")
+        );
+        assert_eq!(url("platform:../etc", "x"), None);
+    }
+
+    #[test]
     fn rejects_forward_parent() {
         let nodes = vec![
             el(None, dom::Tag::Div),
@@ -273,6 +300,37 @@ mod tests {
             panic!()
         };
         assert_eq!(root.attrs, vec![view::Attr::Title("ok".into())]);
+    }
+
+    fn el_with(tag: dom::Tag, attrs: Vec<dom::Attr>) -> Vec<view::Attr> {
+        let nodes = vec![dom::Node {
+            parent: None,
+            kind: dom::NodeKind::Element(dom::Element {
+                key: None,
+                tag,
+                attrs,
+                style: None,
+                events: vec![],
+            }),
+        }];
+        let out = tree(nodes, "p").unwrap();
+        let view::NodeKind::Element(root) = &out[0].kind else {
+            panic!()
+        };
+        root.attrs.clone()
+    }
+
+    #[test]
+    fn form_attrs_are_tag_scoped_and_clamped() {
+        assert_eq!(
+            el_with(dom::Tag::Input, vec![dom::Attr::Required(true), dom::Attr::MaxLength(u32::MAX)]),
+            vec![view::Attr::Required(true), view::Attr::MaxLength(MAX_INPUT_LEN)]
+        );
+        assert_eq!(
+            el_with(dom::Tag::Button, vec![dom::Attr::Submits(true), dom::Attr::Required(true)]),
+            vec![view::Attr::Submits(true)]
+        );
+        assert!(el_with(dom::Tag::Div, vec![dom::Attr::Submits(true), dom::Attr::MaxLength(3)]).is_empty());
     }
 
     #[test]

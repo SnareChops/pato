@@ -1,0 +1,4 @@
+[overrides]
+"pato:pato-obs" = { path = "../pato-obs/wit/api.wit" }
+"pato:pato-twitch" = { path = "../pato-twitch/wit/api.wit" }
+"pato:pato-commands" = { path = "../pato-commands/wit/api.wit" }

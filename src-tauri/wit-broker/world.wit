@@ -1,0 +1,20 @@
+package pato:broker@0.1.0;
+
+// Host-side counterpart to a 1st-party plugin's public API (e.g.
+// pato-obs's `pato:pato-obs/scenes`). Every such interface gets imported
+// by a world here and implemented in src/wasm/<name>_broker.rs by
+// forwarding the call to the owning plugin via `wasm::plugin_call_by_name` -
+// see obs_broker.rs's doc comment for the full mechanism. One world per
+// broker module so each module's bindgen only generates its own traits.
+world obs-broker {
+  import pato:pato-obs/scenes@0.1.0;
+}
+
+world twitch-broker {
+  import pato:pato-twitch/chat@0.1.0;
+}
+
+world commands-broker {
+  import pato:pato-commands/platform@0.1.0;
+  import pato:pato-commands/signals@0.1.0;
+}

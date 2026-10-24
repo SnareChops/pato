@@ -76,6 +76,10 @@ impl plugin::widget_events::Guest for PatoDiscord {
     // Widget was (re)sized on the grid. The status widget is pre-made and
     // fixed-size; nothing to do.
     fn on_layout(_layout: plugin::widget_events::WidgetLayout) {}
+
+    // No modals yet.
+    fn on_modal_closed(_id: String) {}
+    fn on_confirm(_id: String, _confirmed: bool) {}
 }
 
 impl plugin::auth_events::Guest for PatoDiscord {

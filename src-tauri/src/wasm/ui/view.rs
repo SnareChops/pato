@@ -31,20 +31,20 @@ macro_rules! enum_from {
 pub enum Tag {
     Div, Span, Section, Header, Footer, Nav, Ul, Ol, Li,
     P, H1, H2, H3, H4, H5, H6, Strong, Em, Small, Code, Pre, Blockquote,
-    Button, Input, Select, Option, Textarea, Label, A, Img,
+    Button, Input, Select, Option, Textarea, Label, A, Img, Form,
     Table, Thead, Tbody, Tr, Th, Td, Progress, Meter,
 }
 enum_from!(dom::Tag => Tag {
     Div, Span, Section, Header, Footer, Nav, Ul, Ol, Li,
     P, H1, H2, H3, H4, H5, H6, Strong, Em, Small, Code, Pre, Blockquote,
-    Button, Input, Select, Option, Textarea, Label, A, Img,
+    Button, Input, Select, Option, Textarea, Label, A, Img, Form,
     Table, Thead, Tbody, Tr, Th, Td, Progress, Meter,
 });
 
 #[derive(Serialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub enum InputType { Text, Number, Checkbox, Radio }
-enum_from!(dom::InputType => InputType { Text, Number, Checkbox, Radio });
+pub enum InputType { Text, Number, Checkbox, Radio, Switch, Password }
+enum_from!(dom::InputType => InputType { Text, Number, Checkbox, Radio, Switch, Password });
 
 #[derive(Serialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "kebab-case")]
@@ -83,9 +83,9 @@ enum_from!(dom::ThemeColor => ThemeColor {
 
 #[derive(Serialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "kebab-case")]
-pub enum EventKind { Click, Input, Change, Submit, Focus, Blur, EnterKey }
+pub enum EventKind { Click, Input, Change, Submit, Focus, Blur, EnterKey, ContextMenu }
 enum_from!(dom::EventKind => EventKind {
-    Click, Input, Change, Submit, Focus, Blur, EnterKey,
+    Click, Input, Change, Submit, Focus, Blur, EnterKey, ContextMenu,
 });
 
 #[derive(Serialize, Clone, PartialEq, Debug)]
@@ -134,6 +134,9 @@ pub enum Attr {
     Min(f64),
     Max(f64),
     Step(f64),
+    Required(bool),
+    MaxLength(u32),
+    Submits(bool),
 }
 
 #[derive(Serialize, Clone, PartialEq, Debug, Default)]
@@ -292,6 +295,45 @@ pub enum Widget {
     Custom(CustomWidget),
 }
 
+// --- modals ------------------------------------------------------------
+
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum ModalSize { Sm, Md, Lg }
+
+#[derive(Serialize, Clone, Copy, PartialEq, Debug)]
+#[serde(rename_all = "kebab-case")]
+pub enum ConfirmTone { Normal, Danger }
+
+#[derive(Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomModal {
+    pub id: String,
+    /// Display label of the owning plugin, chosen by the core.
+    pub plugin: String,
+    pub title: String,
+    pub size: ModalSize,
+    pub nodes: Vec<Node>,
+}
+
+#[derive(Serialize, Clone, PartialEq, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfirmModal {
+    pub id: String,
+    pub plugin: String,
+    pub title: String,
+    pub message: String,
+    pub confirm_label: String,
+    pub tone: ConfirmTone,
+}
+
+#[derive(Serialize, Clone, PartialEq, Debug)]
+#[serde(tag = "tag", content = "val", rename_all = "kebab-case")]
+pub enum Modal {
+    Custom(CustomModal),
+    Confirm(ConfirmModal),
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -379,6 +421,62 @@ mod tests {
                         { "parent": 1, "kind": { "tag": "text", "val": "Refresh" } },
                         { "parent": 0, "kind": { "tag": "value-slot", "val": "count" } }
                     ]
+                }
+            })
+        );
+    }
+
+    #[test]
+    fn modal_wire_encoding_matches_jco() {
+        let confirm = Modal::Confirm(ConfirmModal {
+            id: "twitch|del".into(),
+            plugin: "Twitch".into(),
+            title: "Delete?".into(),
+            message: "Sure?".into(),
+            confirm_label: "Delete".into(),
+            tone: ConfirmTone::Danger,
+        });
+        assert_eq!(
+            serde_json::to_value(&confirm).unwrap(),
+            serde_json::json!({
+                "tag": "confirm",
+                "val": {
+                    "id": "twitch|del", "plugin": "Twitch", "title": "Delete?",
+                    "message": "Sure?", "confirmLabel": "Delete", "tone": "danger",
+                }
+            })
+        );
+
+        let custom = Modal::Custom(CustomModal {
+            id: "twitch|form".into(),
+            plugin: "Twitch".into(),
+            title: "New".into(),
+            size: ModalSize::Md,
+            nodes: vec![Node {
+                parent: None,
+                kind: NodeKind::Element(Element {
+                    key: None,
+                    tag: Tag::Form,
+                    attrs: vec![Attr::Required(true), Attr::MaxLength(45), Attr::Submits(true)],
+                    style: None,
+                    events: vec![],
+                }),
+            }],
+        });
+        assert_eq!(
+            serde_json::to_value(&custom).unwrap(),
+            serde_json::json!({
+                "tag": "custom",
+                "val": {
+                    "id": "twitch|form", "plugin": "Twitch", "title": "New", "size": "md",
+                    "nodes": [{ "kind": { "tag": "element", "val": {
+                        "tag": "form", "events": [],
+                        "attrs": [
+                            { "tag": "required", "val": true },
+                            { "tag": "max-length", "val": 45 },
+                            { "tag": "submits", "val": true },
+                        ],
+                    } } }],
                 }
             })
         );

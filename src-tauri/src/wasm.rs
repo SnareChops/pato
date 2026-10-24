@@ -14,9 +14,13 @@ use wasmtime_wasi_http::{WasiHttpCtx, WasiHttpCtxView, WasiHttpView};
 
 pub mod auth;
 pub mod db;
+pub mod commands_broker;
+pub mod obs_broker;
+pub mod twitch_broker;
 pub mod log;
 mod plugins;
 pub mod storage;
+pub mod timers;
 pub mod ui;
 pub mod websocket;
 
@@ -131,6 +135,10 @@ pub async fn init() -> Result<(), String> {
     storage::init()?;
     db::init()?;
     websocket::init()?;
+    timers::init()?;
+    obs_broker::init()?;
+    twitch_broker::init()?;
+    commands_broker::init()?;
     freeze_linker()?;
     plugins::init().await?;
     Ok(())

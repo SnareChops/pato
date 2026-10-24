@@ -1,0 +1,13 @@
+package pato:pato-commands@0.1.0;
+
+world commands {
+  import pato:plugin/widget-dom@0.1.0;
+  import pato:plugin/widgets@0.1.0;
+  import pato:plugin/modals@0.1.0;
+  import pato:plugin/storage@0.1.0;
+  import pato:pato-twitch/chat@0.1.0;
+  import signals;
+  export pato:plugin/init@0.1.0;
+  export pato:plugin/widget-events@0.1.0;
+  export platform;
+}

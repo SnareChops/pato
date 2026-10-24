@@ -1,0 +1,2 @@
+[overrides]
+"pato:plugin" = { path = "../src-tauri/wit/plugin.wit" }

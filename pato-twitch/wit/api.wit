@@ -1,0 +1,14 @@
+package pato:pato-twitch@0.1.0;
+
+// Public API other plugins import to talk to Twitch chat through pato-twitch.
+// src-tauri brokers every call across the plugin boundary (see
+// src-tauri/wit-broker and src-tauri/src/wasm/twitch_broker.rs).
+interface chat {
+  // Sends a message to the primary channel, as the logged-in user. `false` means chat isn't connected (or the text was
+  // empty) and nothing was sent; `true` only means it was sent.
+  send-message: func(text: string) -> bool;
+
+  // The primary channel (lowercase, no `#`) chat is connected to, if any. It
+  // defaults to the signed-in account but can be set to another channel.
+  channel: func() -> option<string>;
+}

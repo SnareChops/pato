@@ -68,13 +68,16 @@ interface widget-dom {
     // text
     p, h1, h2, h3, h4, h5, h6, strong, em, small, code, pre, blockquote,
     // interactive
-    button, input, select, %option, textarea, label, a, img,
+    button, input, select, %option, textarea, label, a, img, form,
     // data
     table, thead, tbody, tr, th, td, progress, meter,
   }
 
+  // `switch` is a checkbox drawn as an on/off toggle; it reports `toggled`
+  // like a checkbox does. `password` is `text` with the browser's native
+  // masking - never sent back to the plugin unmasked over any other channel.
   enum input-type {
-    text, number, checkbox, radio,
+    text, number, checkbox, radio, switch, password,
   }
 
   // Typed, per-tag-whitelisted attributes. The core rejects any attr that is
@@ -103,6 +106,13 @@ interface widget-dom {
     min(f64),
     max(f64),
     step(f64),
+    // form controls: the enclosing `form` cannot be submitted while empty
+    required(bool),
+    // `input` / `textarea`: max characters the user can type
+    max-length(u32),
+    // `button`: pressing it submits the enclosing `form` (fires its `submit`
+    // binding). Buttons never submit unless this is set.
+    submits(bool),
   }
 
   // --- constrained style vocabulary ----------------------------------------
@@ -183,9 +193,13 @@ interface widget-dom {
 
   // --- events ------------------------------------------------------------
 
-  // Whitelisted event kinds a plugin may subscribe to on an element.
+  // Whitelisted event kinds a plugin may subscribe to on an element. `submit`
+  // is bound on a `form` and delivers its named fields as `payload.fields`;
+  // the webview always cancels the browser's own form submission.
+  // `context-menu` is a right-click on the element; the webview suppresses
+  // the browser's own menu, and the plugin decides what to show instead.
   enum event-kind {
-    click, input, change, submit, focus, blur, enter-key,
+    click, input, change, submit, focus, blur, enter-key, context-menu,
   }
   // Subscribe `handler` (a plugin-chosen opaque id, echoed back on the event)
   // to `kind` on the owning element.
@@ -294,6 +308,59 @@ interface widgets {
   request-render: func(widget-id: string);
 }
 
+// Modal dialogs: a large surface for forms and prompts that don't fit in a
+// widget's grid footprint. The core owns the chrome (backdrop, title bar,
+// close button, focus trapping, Esc) and always labels the dialog with the
+// owning plugin's name, so a plugin can neither restyle nor impersonate app UI.
+// A plugin supplies only the body, as the same validated node table widgets
+// use; interactions come back through `widget-events.on-event` with the
+// modal's id as `widget-id`. A plugin may have at most two modals open at a
+// time, and can only touch its own.
+interface modals {
+  use widget-dom.{node};
+
+  enum modal-size {
+    sm, md, lg,
+  }
+  record modal {
+    // Plugin-chosen id; scoped to the plugin by the core.
+    id: string,
+    // Plain text shown in the host-drawn title bar (max 80 chars).
+    title: string,
+    size: modal-size,
+    // Flat node table, node 0 is the root - same rules as `custom-widget`.
+    nodes: list<node>,
+  }
+  // Open a modal. Calling this for an id that is already open updates it in
+  // place (title, size and body), keeping keyed elements' focus and typed
+  // input. Returns false if rejected (invalid tree, too many modals open).
+  open: func(modal: modal) -> bool;
+  // Close one of the plugin's own modals (or confirm prompts). No-op if it
+  // is not open. Does not fire `on-modal-closed`.
+  close: func(id: string);
+
+  enum confirm-tone {
+    normal,
+    // Destructive action: the cancel button is focused by default and the
+    // confirm button is drawn as dangerous.
+    danger,
+  }
+  // A pre-made yes/no prompt. The core draws all of it; there is no body tree.
+  record confirm-prompt {
+    id: string,
+    // max 80 chars
+    title: string,
+    // Plain text, max 1000 chars; line breaks are preserved.
+    message: string,
+    // Text of the confirm button, e.g. "Delete" (max 30 chars).
+    confirm-label: string,
+    tone: confirm-tone,
+  }
+  // Show a confirm prompt. The answer arrives via `widget-events.on-confirm`.
+  // Returns false if rejected.
+  confirm: func(prompt: confirm-prompt) -> bool;
+}
+
 interface widget-events {
   use widget-dom.{event-kind, tile-size};
 
@@ -306,7 +373,7 @@ interface widget-events {
   // --- custom-widget ----------------------------------------------
   // Only whitelisted values, built by the core — never a raw DOM event.
   variant payload {
-    // click / focus / blur / enter-key
+    // click / focus / blur / enter-key / context-menu
     none,
     // input / change on text|number
     text(string),
@@ -332,6 +399,14 @@ interface widget-events {
     tiles: tile-size,
   }
   on-layout: func(layout: widget-layout);
+
+  // --- modals ------------------------------------------------------------
+  // The user dismissed a modal opened with `modals.open` (close button, Esc or
+  // backdrop click). Not fired when the plugin closed it itself.
+  on-modal-closed: func(id: string);
+  // The user answered a `modals.confirm` prompt. Dismissing it any other way
+  // (Esc, backdrop, close button) is `confirmed: false`.
+  on-confirm: func(id: string, confirmed: bool);
 }
 
 interface auth {
@@ -369,6 +444,22 @@ interface websocket-events {
   on-error: func(id: string, message: string);
 }
 
+interface timers {
+  // Starts a repeating timer that calls `timers-events.on-tick` with the
+  // returned id every `interval-ms`. The first tick fires one interval from
+  // now. Errors if `interval-ms` is below the core's minimum (50 ms) or the
+  // plugin already has the maximum number of timers (16).
+  set-interval: func(interval-ms: u32) -> result<string, string>;
+  // Stops a timer owned by the calling plugin. Unknown ids are ignored.
+  cancel: func(id: string);
+}
+
+interface timers-events {
+  // A timer fired. Ticks never overlap: if a handler outlasts the interval,
+  // the missed ticks are skipped rather than queued.
+  on-tick: func(id: string);
+}
+
 world plugin {
   export init;
 }
@@ -378,6 +469,7 @@ world logger {
 world ui {
   import widget-dom;
   import widgets;
+  import modals;
   export widget-events;
 }
 world db {
@@ -391,6 +483,7 @@ world host {
 
   import widget-dom;
   import widgets;
+  import modals;
   export widget-events;
 }
 world oauth {
@@ -399,4 +492,7 @@ world oauth {
 }
 world websocket-host {
   import websocket;
+}
+world timers-host {
+  import timers;
 }

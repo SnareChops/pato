@@ -59,6 +59,8 @@ impl Builder {
     pub fn text(&mut self, parent: u32, value: &str) -> u32 {
         self.push(Some(parent), dom::NodeKind::Text(value.to_string()))
     }
+    // No widget uses value-slots right now; kept as the builder for that node kind.
+    #[allow(dead_code)]
     pub fn slot(&mut self, parent: u32, name: &str) -> u32 {
         self.push(Some(parent), dom::NodeKind::ValueSlot(name.to_string()))
     }

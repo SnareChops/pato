@@ -25,12 +25,18 @@ const ACTION_CONNECT: &str = "connect";
 // Handled by `PatoTwitch::logout` (`lib.rs`), not here, since it affects
 // every widget that depends on the connection - not just this one.
 pub const ACTION_DISCONNECT: &str = "disconnect";
+// Also handled in `lib.rs`: it needs the plugin's settings and the modal.
+pub const ACTION_PRIMARY_CHANNEL: &str = "primary-channel";
+
+// `platform:<name>` is resolved by the core to the bundled brand icon, so the
+// widget identifies its platform at a glance.
+const ICON: &str = "platform:twitch";
 
 impl TwitchStatusWidget {
     pub fn new() -> Self {
         let widget = Self(widgets::StatusWidget {
             id: "twitch_status".to_string(),
-            icon: "".to_string(),
+            icon: ICON.to_string(),
             label: "Connect".to_string(),
             tooltip: Some("Twitch".to_string()),
             actions: vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")],
@@ -52,19 +58,29 @@ impl TwitchStatusWidget {
         }
     }
 
-    // Show the connected Twitch user, with a "Disconnect" action in the
-    // widget's dropdown.
-    pub fn connected(&mut self, user: &TwitchUser) {
+    // Show the connected Twitch user, with the primary channel setting and a
+    // "Disconnect" action in the widget's dropdown. The tooltip names the
+    // primary channel, since it can differ from the signed-in account.
+    pub fn connected(&mut self, user: &TwitchUser, primary_channel: &str) {
         self.label = user.display_name.clone();
-        self.icon = user.profile_image_url.clone();
-        self.actions = vec![action(ACTION_DISCONNECT, "Disconnect", "Sign out of Twitch")];
+        self.icon = ICON.to_string();
+        self.tooltip = Some(format!("Twitch - primary channel #{primary_channel}"));
+        self.actions = vec![
+            action(
+                ACTION_PRIMARY_CHANNEL,
+                "Primary channel...",
+                "Choose the channel chat, commands and redeems use",
+            ),
+            action(ACTION_DISCONNECT, "Disconnect", "Sign out of Twitch"),
+        ];
         self.update();
     }
 
     // Reset the widget to the disconnected "Connect" state
     pub fn disconnected(&mut self) {
         self.label = "Connect".to_string();
-        self.icon = "".to_string();
+        self.icon = ICON.to_string();
+        self.tooltip = Some("Twitch".to_string());
         self.actions = vec![action(ACTION_CONNECT, "Connect", "Connect to Twitch")];
         self.update();
     }

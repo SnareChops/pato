@@ -1,0 +1,13 @@
+package pato:pato-obs@0.1.0;
+
+world obs {
+  import pato:plugin/widget-dom@0.1.0;
+  import pato:plugin/widgets@0.1.0;
+  import pato:plugin/modals@0.1.0;
+  import pato:plugin/storage@0.1.0;
+  import pato:plugin/websocket@0.1.0;
+  export pato:plugin/init@0.1.0;
+  export pato:plugin/widget-events@0.1.0;
+  export pato:plugin/websocket-events@0.1.0;
+  export scenes;
+}

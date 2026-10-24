@@ -28,6 +28,8 @@ fn main() {
             wasm::ui::status_widget_action,
             wasm::ui::custom_widget_event,
             wasm::ui::widget_resized,
+            wasm::ui::modal::modal_dismissed,
+            wasm::ui::modal::confirm_answered,
             js::js_response,
         ])
         .run(tauri::generate_context!())
